@@ -1,6 +1,8 @@
 // Root aggregator, no dependencies of its own.
 // The library lives in :kiit-rpc, demo apps live under :samples.
 plugins {
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.androidLibrary) apply false
     alias(libs.plugins.vanniktech.mavenPublish) apply false
