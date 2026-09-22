@@ -63,8 +63,9 @@ private fun <T> decodeBody(success: Success<HttpRpcResponse>, serializer: Serial
     }
 
 /** Runs [params] and decodes the response body into [T] via [serializer]. */
-suspend fun <T> RpcClient.executeOutcome(params: ExecuteParams, serializer: Serializer<T>): Outcome<T> =
-    dispatch(params).decode(serializer)
+suspend fun <T> RpcClient.executeOutcome(params: ExecuteParams, serializer: Serializer<T>): Outcome<T> {
+    return dispatch(params).decode(serializer)
+}
 
 /** Same as [executeOutcome], but the error branch is a plain [Throwable] ([Try]), via [Result.toTry]. */
 suspend fun <T> RpcClient.executeResult(params: ExecuteParams, serializer: Serializer<T>): Try<T> =
@@ -79,4 +80,6 @@ suspend inline fun <reified T> RpcClient.executeOutcome(params: ExecuteParams): 
     executeOutcome(params, serializer = Serializer())
 
 /** Reified convenience for [executeResult], see [executeOutcome]'s reified overload. */
-suspend inline fun <reified T> RpcClient.executeResult(params: ExecuteParams): Try<T> = executeOutcome<T>(params).toTry()
+suspend inline fun <reified T> RpcClient.executeResult(params: ExecuteParams): Try<T> {
+    return executeOutcome<T>(params).toTry()
+}
