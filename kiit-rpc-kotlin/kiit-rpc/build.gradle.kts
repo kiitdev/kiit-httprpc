@@ -46,8 +46,13 @@ kotlin {
             // Hardcoded coordinates rather than version-catalog entries, matching kiit-result's
             // own dependency on kiit-codes — these are external kiit libraries, not part of this
             // repo's own version catalog.
-            implementation("dev.kiit:kiit-codes:1.1.0")
-            implementation("dev.kiit:kiit-result:1.0.2")
+            //
+            // api, not implementation: kiit-rpc's public API directly exposes both (every
+            // RpcClient method returns Outcome<HttpRpcResponse>, Policy returns Outcome,
+            // StatusConverter returns Status), so consumers need them on their own compile
+            // classpath too, same reasoning as kiit-result's own dependency on kiit-codes.
+            api("dev.kiit:kiit-codes:1.1.0")
+            api("dev.kiit:kiit-result:1.0.2")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
