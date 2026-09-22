@@ -34,8 +34,8 @@ import io.ktor.http.HttpMethod as KtorHttpMethod
 private data class CallParams(
     val method: HttpMethod,
     val url: String,
-    val meta: Map<String, String>?,
-    val args: Map<String, String>?,
+    val meta: Meta?,
+    val args: Args?,
     val auth: Auth?,
     val body: Body?,
 )
@@ -73,47 +73,47 @@ class HttpRpc(
 
     override suspend fun get(
         url: String,
-        meta: Map<String, String>?,
-        args: Map<String, String>?,
+        meta: Meta?,
+        args: Args?,
         auth: Auth?,
     ): Outcome<HttpRpcResponse> = call(CallParams(HttpMethod.Get, url, meta, args, auth, null))
 
     override suspend fun query(
         url: String,
-        meta: Map<String, String>?,
-        args: Map<String, String>?,
+        meta: Meta?,
+        args: Args?,
         auth: Auth?,
         body: Body?,
     ): Outcome<HttpRpcResponse> = call(CallParams(HttpMethod.Query, url, meta, args, auth, body))
 
     override suspend fun create(
         url: String,
-        meta: Map<String, String>?,
-        args: Map<String, String>?,
+        meta: Meta?,
+        args: Args?,
         auth: Auth?,
         body: Body?,
     ): Outcome<HttpRpcResponse> = call(CallParams(HttpMethod.Post, url, meta, args, auth, body))
 
     override suspend fun update(
         url: String,
-        meta: Map<String, String>?,
-        args: Map<String, String>?,
+        meta: Meta?,
+        args: Args?,
         auth: Auth?,
         body: Body?,
     ): Outcome<HttpRpcResponse> = call(CallParams(HttpMethod.Put, url, meta, args, auth, body))
 
     override suspend fun patch(
         url: String,
-        meta: Map<String, String>?,
-        args: Map<String, String>?,
+        meta: Meta?,
+        args: Args?,
         auth: Auth?,
         body: Body?,
     ): Outcome<HttpRpcResponse> = call(CallParams(HttpMethod.Patch, url, meta, args, auth, body))
 
     override suspend fun delete(
         url: String,
-        meta: Map<String, String>?,
-        args: Map<String, String>?,
+        meta: Meta?,
+        args: Args?,
         auth: Auth?,
         body: Body?,
     ): Outcome<HttpRpcResponse> = call(CallParams(HttpMethod.Delete, url, meta, args, auth, body))
@@ -134,14 +134,14 @@ class HttpRpc(
             body = resolveBodyText(effectiveBody),
         )
 
-    private fun buildUrl(url: String, args: Map<String, String>?): String {
+    private fun buildUrl(url: String, args: Args?): String {
         if (args.isNullOrEmpty()) return url
         val builder = URLBuilder(url)
         args.forEach { (key, value) -> builder.parameters.append(key, value) }
         return builder.buildString()
     }
 
-    private fun buildHeaders(meta: Map<String, String>?, auth: Auth?, body: Body?): Map<String, String> {
+    private fun buildHeaders(meta: Meta?, auth: Auth?, body: Body?): Map<String, String> {
         val headers = LinkedHashMap<String, String>()
         headers.putAll(settings.defaultHeaders)
         meta?.let { headers.putAll(it) }

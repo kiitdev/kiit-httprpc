@@ -9,47 +9,47 @@ import kiit.result.Outcome
 interface RpcClient {
     suspend fun get(
         url: String,
-        meta: Map<String, String>? = null,
-        args: Map<String, String>? = null,
+        meta: Meta? = null,
+        args: Args? = null,
         auth: Auth? = null,
     ): Outcome<HttpRpcResponse>
 
     suspend fun query(
         url: String,
-        meta: Map<String, String>? = null,
-        args: Map<String, String>? = null,
+        meta: Meta? = null,
+        args: Args? = null,
         auth: Auth? = null,
         body: Body? = null,
     ): Outcome<HttpRpcResponse>
 
     suspend fun create(
         url: String,
-        meta: Map<String, String>? = null,
-        args: Map<String, String>? = null,
+        meta: Meta? = null,
+        args: Args? = null,
         auth: Auth? = null,
         body: Body? = null,
     ): Outcome<HttpRpcResponse>
 
     suspend fun update(
         url: String,
-        meta: Map<String, String>? = null,
-        args: Map<String, String>? = null,
+        meta: Meta? = null,
+        args: Args? = null,
         auth: Auth? = null,
         body: Body? = null,
     ): Outcome<HttpRpcResponse>
 
     suspend fun patch(
         url: String,
-        meta: Map<String, String>? = null,
-        args: Map<String, String>? = null,
+        meta: Meta? = null,
+        args: Args? = null,
         auth: Auth? = null,
         body: Body? = null,
     ): Outcome<HttpRpcResponse>
 
     suspend fun delete(
         url: String,
-        meta: Map<String, String>? = null,
-        args: Map<String, String>? = null,
+        meta: Meta? = null,
+        args: Args? = null,
         auth: Auth? = null,
         body: Body? = null,
     ): Outcome<HttpRpcResponse>
