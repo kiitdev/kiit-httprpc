@@ -2,12 +2,14 @@ package kiit.rpc
 
 import kiit.codes.Invalid
 import kiit.codes.Restricted
+import kiit.codes.StatusConstants
 import kiit.codes.Succeeded
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-private const val CODE_DETAIL_DENIED =
-    """{"path":"kiit.dev","code":"Failed:Restricted:DENIED","success":false,"message":"The request was denied."}"""
+private val CODE_DETAIL_DENIED =
+    """{"path":"${StatusConstants.KIIT}","code":"Failed:Restricted:DENIED",""" +
+        """"success":false,"message":"The request was denied."}"""
 
 class StatusConverterTest {
     @Test

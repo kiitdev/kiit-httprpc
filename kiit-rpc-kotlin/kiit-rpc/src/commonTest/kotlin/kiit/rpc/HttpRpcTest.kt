@@ -1,5 +1,6 @@
 package kiit.rpc
 
+import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpStatusCode
 import kiit.codes.Invalid
@@ -21,10 +22,11 @@ class HttpRpcTest {
     fun get_sends_query_params_from_args_and_no_body() =
         runTest {
             lateinit var captured: HttpRequestData
-            val client = mockHttpRpc { request ->
-                captured = request
-                respond("", HttpStatusCode.OK)
-            }
+            val client =
+                mockHttpRpc { request ->
+                    captured = request
+                    respond("", HttpStatusCode.OK)
+                }
             client.get(BASE_URL, args = mapOf("page" to "2", "size" to "10"))
 
             assertEquals(KtorHttpMethod.Get, captured.method)
@@ -37,14 +39,15 @@ class HttpRpcTest {
     fun create_sends_post_with_json_content_type_and_body() =
         runTest {
             lateinit var captured: HttpRequestData
-            val client = mockHttpRpc { request ->
-                captured = request
-                respond("", HttpStatusCode.OK)
-            }
+            val client =
+                mockHttpRpc { request ->
+                    captured = request
+                    respond("", HttpStatusCode.OK)
+                }
             client.create(BASE_URL, body = Body.JsonContent("""{"name":"Ada"}"""))
 
             assertEquals(KtorHttpMethod.Post, captured.method)
-            assertEquals("application/json", captured.headers["Content-Type"])
+            assertEquals("application/json", captured.body.contentType.toString())
             assertEquals("""{"name":"Ada"}""", captured.textBody)
         }
 
@@ -52,10 +55,11 @@ class HttpRpcTest {
     fun update_sends_put_and_patch_sends_patch_and_delete_sends_delete() =
         runTest {
             val methods = mutableListOf<KtorHttpMethod>()
-            val client = mockHttpRpc { request ->
-                methods += request.method
-                respond("", HttpStatusCode.OK)
-            }
+            val client =
+                mockHttpRpc { request ->
+                    methods += request.method
+                    respond("", HttpStatusCode.OK)
+                }
             client.update(BASE_URL, body = Body.RawContent("x"))
             client.patch(BASE_URL, body = Body.RawContent("x"))
             client.delete(BASE_URL)
@@ -67,10 +71,11 @@ class HttpRpcTest {
     fun query_sends_post_on_the_wire_with_its_body_attached() =
         runTest {
             lateinit var captured: HttpRequestData
-            val client = mockHttpRpc { request ->
-                captured = request
-                respond("", HttpStatusCode.OK)
-            }
+            val client =
+                mockHttpRpc { request ->
+                    captured = request
+                    respond("", HttpStatusCode.OK)
+                }
             client.query(BASE_URL, body = Body.JsonContent("""{"filter":"active"}"""))
 
             assertEquals(KtorHttpMethod.Post, captured.method)
@@ -82,10 +87,11 @@ class HttpRpcTest {
         runTest {
             lateinit var captured: HttpRequestData
             val settings = HttpRpcSettings(defaultHeaders = mapOf("X-Client" to "kiit-rpc", "X-Env" to "prod"))
-            val client = mockHttpRpc(settings = settings) { request ->
-                captured = request
-                respond("", HttpStatusCode.OK)
-            }
+            val client =
+                mockHttpRpc(settings = settings) { request ->
+                    captured = request
+                    respond("", HttpStatusCode.OK)
+                }
             client.get(BASE_URL, meta = mapOf("X-Env" to "staging"))
 
             assertEquals("kiit-rpc", captured.headers["X-Client"])
@@ -96,10 +102,11 @@ class HttpRpcTest {
     fun basic_auth_produces_a_base64_authorization_header() =
         runTest {
             lateinit var captured: HttpRequestData
-            val client = mockHttpRpc { request ->
-                captured = request
-                respond("", HttpStatusCode.OK)
-            }
+            val client =
+                mockHttpRpc { request ->
+                    captured = request
+                    respond("", HttpStatusCode.OK)
+                }
             client.get(BASE_URL, auth = Auth.Basic("user", "pass"))
 
             // "user:pass" base64-encoded, verified against the known constant rather than re-deriving it.
@@ -110,10 +117,11 @@ class HttpRpcTest {
     fun bearer_auth_produces_a_bearer_authorization_header() =
         runTest {
             lateinit var captured: HttpRequestData
-            val client = mockHttpRpc { request ->
-                captured = request
-                respond("", HttpStatusCode.OK)
-            }
+            val client =
+                mockHttpRpc { request ->
+                    captured = request
+                    respond("", HttpStatusCode.OK)
+                }
             client.get(BASE_URL, auth = Auth.Bearer("token123"))
 
             assertEquals("Bearer token123", captured.headers["Authorization"])
@@ -123,13 +131,14 @@ class HttpRpcTest {
     fun form_data_body_is_url_encoded_with_the_right_content_type() =
         runTest {
             lateinit var captured: HttpRequestData
-            val client = mockHttpRpc { request ->
-                captured = request
-                respond("", HttpStatusCode.OK)
-            }
+            val client =
+                mockHttpRpc { request ->
+                    captured = request
+                    respond("", HttpStatusCode.OK)
+                }
             client.create(BASE_URL, body = Body.FormData(listOf("a" to "1", "b" to "hello world")))
 
-            assertEquals("application/x-www-form-urlencoded", captured.headers["Content-Type"])
+            assertEquals("application/x-www-form-urlencoded", captured.body.contentType.toString())
             assertEquals("a=1&b=hello+world", captured.textBody)
         }
 
@@ -137,10 +146,11 @@ class HttpRpcTest {
     fun multipart_body_gets_a_multipart_content_type_with_a_boundary() =
         runTest {
             lateinit var captured: HttpRequestData
-            val client = mockHttpRpc { request ->
-                captured = request
-                respond("", HttpStatusCode.OK)
-            }
+            val client =
+                mockHttpRpc { request ->
+                    captured = request
+                    respond("", HttpStatusCode.OK)
+                }
             val multipart = Body.MultiPart(listOf("note" to ContentText("hello")))
             client.create(BASE_URL, body = multipart)
 

@@ -29,7 +29,8 @@ private fun parseJsonObjectOrNull(body: String): JsonObject? =
         Json.parseToJsonElement(body).jsonObject
     } catch (e: SerializationException) {
         null
-    } catch (e: IllegalStateException) {
+    } catch (e: IllegalArgumentException) {
+        // .jsonObject throws this when the parsed element isn't actually a JsonObject.
         null
     }
 

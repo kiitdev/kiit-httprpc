@@ -181,8 +181,11 @@ class HttpRpc(
             is Body.JsonContent -> body.content
         }
 
+    /** `spaceToPlus = true`: the actual application/x-www-form-urlencoded convention, not raw percent-encoding. */
     private fun encodeFormData(values: List<Pair<String, String>>): String =
-        values.joinToString("&") { (key, value) -> "${key.encodeURLParameter()}=${value.encodeURLParameter()}" }
+        values.joinToString("&") { (key, value) ->
+            "${key.encodeURLParameter(spaceToPlus = true)}=${value.encodeURLParameter(spaceToPlus = true)}"
+        }
 
     /**
      * Different Ktor engines throw different exception types for the same conceptual failure

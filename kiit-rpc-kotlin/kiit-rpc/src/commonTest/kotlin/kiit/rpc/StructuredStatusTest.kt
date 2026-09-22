@@ -3,6 +3,7 @@ package kiit.rpc
 import kiit.codes.Invalid
 import kiit.codes.Rejected
 import kiit.codes.Restricted
+import kiit.codes.StatusConstants
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -10,7 +11,9 @@ import kotlin.test.assertNull
 class StructuredStatusTest {
     @Test
     fun codeDetail_with_a_kiit_builtin_resolves_to_the_registry_singleton() {
-        val body = """{"path":"kiit.dev","code":"Failed:Restricted:DENIED","success":false,"message":"The request was denied."}"""
+        val body =
+            """{"path":"${StatusConstants.KIIT}","code":"Failed:Restricted:DENIED",""" +
+                """"success":false,"message":"The request was denied."}"""
         assertEquals(Restricted.DENIED, structuredStatusOrNull(body))
     }
 

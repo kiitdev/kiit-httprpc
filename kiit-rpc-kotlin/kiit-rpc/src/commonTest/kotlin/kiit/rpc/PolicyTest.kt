@@ -7,7 +7,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.assertIs
 
 private fun ok(value: String): Outcome<String> = Success(value, Succeeded.SUCCESS)
 
@@ -47,10 +47,11 @@ class PolicyTest {
                         return ok("short-circuited")
                     }
                 }
-            val pipeline = Policies.chain(listOf(shortCircuit)) { input ->
-                called = true
-                ok(input)
-            }
+            val pipeline =
+                Policies.chain(listOf(shortCircuit)) { input ->
+                    called = true
+                    ok(input)
+                }
             val result = pipeline("input")
             assertFalse(called)
             assertEquals(ok("short-circuited"), result)
@@ -66,8 +67,7 @@ class PolicyTest {
                     }
                 }
             val pipeline = Policies.chain(listOf(rewriter), ::ok)
-            val result = pipeline("original")
-            assertTrue(result is Success)
-            assertEquals("rewritten", (result as Success).value)
+            val result = assertIs<Success<String>>(pipeline("original"))
+            assertEquals("rewritten", result.value)
         }
 }

@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.vanniktech.mavenPublish)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
@@ -140,6 +141,16 @@ detekt {
 signing {
     useGpgCmd()
     sign(publishing.publications)
+}
+
+// The jvm() target compiles to JVM 21 bytecode (see the jvm{} block above, for exhaustive Java
+// switch over sealed Auth/Body later) — run jvmTest on a matching JVM, same as kiit-codes/kiit-result.
+tasks.named<Test>("jvmTest") {
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
 }
 
 // Read by the release workflow (once one exists) to derive the git tag/GitHub release name from

@@ -37,3 +37,4 @@ detekt                  = { id = "io.gitlab.arturbosch.detekt",      version.ref
 dokka                   = { id = "org.jetbrains.dokka",              version.ref = "dokka"   }
 kover                   = { id = "org.jetbrains.kotlinx.kover",      version.ref = "kover"   }
 skie                    = { id = "co.touchlab.skie",                 version.ref = "skie"    }
+kotlin-serialization    = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

@@ -1,5 +1,6 @@
 package kiit.rpc
 
+import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpStatusCode
 import kiit.codes.Invalid
 import kiit.codes.Unserved
