@@ -42,7 +42,12 @@ private fun JsonObject.stringField(key: String): String? {
  * `CodeDetail.code` or a kiit-origin `Problem.type`) describes: a kiit built-in when [origin]
  * matches the registry, else a direct subtype construction from [group]/[name].
  */
-private fun statusFromCode(code: String, origin: String, scope: String, message: String): Status? {
+private fun statusFromCode(
+    code: String,
+    origin: String,
+    scope: String,
+    message: String
+): Status? {
     val parts = code.split(":")
     if (parts.size != 3) return null
     val group = parts[1]
