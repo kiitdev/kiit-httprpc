@@ -16,9 +16,17 @@ interface Serializer<T> {
     fun decode(content: String): T
 }
 
+/**
+ * Default JSON config for [KotlinxSerializer]/[Serializer]. `ignoreUnknownKeys = true`: the whole
+ * point of a typed decode is picking out the fields you care about, a real API response almost
+ * always has more fields than any one consumer's type declares. kotlinx.serialization's own
+ * default is strict about this and throws instead.
+ */
+val DefaultJson: Json = Json { ignoreUnknownKeys = true }
+
 class KotlinxSerializer<T>(
     private val serializer: KSerializer<T>,
-    private val json: Json = Json,
+    private val json: Json = DefaultJson,
 ) : Serializer<T> {
     override fun encode(value: T): String = json.encodeToString(serializer, value)
 
@@ -31,4 +39,4 @@ class KotlinxSerializer<T>(
  * a [KotlinxSerializer] directly with an explicit `T.serializer()`.
  */
 @Suppress("ktlint:standard:function-naming")
-inline fun <reified T> Serializer(json: Json = Json): Serializer<T> = KotlinxSerializer(serializer(), json)
+inline fun <reified T> Serializer(json: Json = DefaultJson): Serializer<T> = KotlinxSerializer(serializer(), json)
