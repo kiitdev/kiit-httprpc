@@ -19,9 +19,9 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonObject
 
 /**
- * Parses [body] as a JSON object, or null if it isn't valid JSON or isn't an object — both are
- * expected, non-exceptional outcomes here (most response bodies match neither structured shape
- * below), so the caught exceptions are deliberately not rethrown/logged.
+ * Parses [body] as a JSON object, or null if it isn't valid JSON or isn't an object. Both are
+ * expected outcomes here, most response bodies match neither structured shape below, so the
+ * caught exceptions are deliberately not rethrown or logged.
  */
 @Suppress("SwallowedException")
 private fun parseJsonObjectOrNull(body: String): JsonObject? =
@@ -61,9 +61,9 @@ private fun statusFromCode(code: String, origin: String, scope: String, message:
 }
 
 /**
- * `CodeDetail` shape (`kiit.codes.formats.CodeDetail`'s `path`/`code`/`success`/`message`) —
- * deliberately a loose field-shape check, not a strict `@Serializable` decode: an unrelated
- * third-party body that happens to have an unrelated `code` field should fail this harmlessly.
+ * `CodeDetail` shape (`kiit.codes.formats.CodeDetail`'s `path`/`code`/`success`/`message`). A
+ * loose field-shape check, not a strict `@Serializable` decode. An unrelated third-party body
+ * with its own unrelated `code` field should fail this harmlessly.
  */
 private fun JsonObject.codeDetailStatusOrNull(): Status? {
     val code = stringField("code") ?: return null
@@ -78,12 +78,12 @@ private fun JsonObject.codeDetailStatusOrNull(): Status? {
 }
 
 /**
- * RFC 9457 `Problem` shape (`type`/`title`/`status`). Only the kiit-origin special case embeds a
- * `code` — `?code=Failed:Rejected:DUPLICATE_CHARGE#taxonomy` appended to kiit's own docs base URL,
- * see `kiit.codes.formats.defaultTypeBuilder` — so only that case is reconstructed; a custom
- * origin's dash-path `type` (`"payments.cards/rejected/duplicate-charge"`) doesn't carry enough
- * back (the origin itself depends on a `baseUrls` mapping this client has no way to know), so it
- * isn't attempted.
+ * RFC 9457 `Problem` shape (`type`/`title`/`status`).
+ *
+ * 1. Only the kiit-origin case embeds a `code`: `?code=Failed:Rejected:DUPLICATE_CHARGE#taxonomy`
+ *    appended to kiit's docs base URL (`kiit.codes.formats.defaultTypeBuilder`).
+ * 2. A custom origin's dash-path `type` (`"payments.cards/rejected/duplicate-charge"`) isn't
+ *    reconstructed. The origin itself depends on a `baseUrls` mapping this client can't know.
  */
 private fun JsonObject.problemStatusOrNull(): Status? {
     val type = stringField("type") ?: return null
@@ -94,11 +94,11 @@ private fun JsonObject.problemStatusOrNull(): Status? {
 }
 
 /**
- * Reconstructs a [Status] from a response body carrying either kiit-native structured error
- * shape (`CodeDetail` or a kiit-origin `Problem`). Returns null when [body] matches neither —
- * [KiitStatusConverter] falls back to [Int.toStatus] (the HTTP status code table) then. Internal:
- * a caller wanting this behavior goes through [StatusConverter]/[KiitStatusConverter], not this
- * directly.
+ * Reconstructs a [Status] from a response body carrying a kiit-native structured error shape,
+ * either `CodeDetail` or a kiit-origin `Problem`. Returns null when [body] matches neither, and
+ * [KiitStatusConverter] falls back to [Int.toStatus] then.
+ *
+ * Internal: a caller wanting this behavior goes through [StatusConverter]/[KiitStatusConverter].
  */
 internal fun structuredStatusOrNull(body: String): Status? {
     val obj = parseJsonObjectOrNull(body) ?: return null

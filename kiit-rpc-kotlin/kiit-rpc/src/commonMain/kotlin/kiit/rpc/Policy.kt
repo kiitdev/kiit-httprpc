@@ -3,17 +3,15 @@ package kiit.rpc
 import kiit.result.Outcome
 
 /**
- * Mirrors `kiit.policy`'s existing `Policy<I, O>` shape (`kiit/src/internal/policy`, currently
- * unpublished/JVM-only in the monorepo) rather than inventing new middleware terminology — same
- * mental model, same composition semantics, reimplemented locally here since that module isn't
- * published anywhere yet. Swappable for a real dependency later if `kiit-policy` is ever
- * extracted into its own published KMP repo.
+ * Mirrors `kiit.policy`'s `Policy<I, O>` shape (`kiit/src/internal/policy`, unpublished/JVM-only
+ * in the monorepo), reimplemented locally since that module isn't published anywhere yet.
+ * Swappable for a real dependency later if `kiit-policy` gets extracted into its own repo.
  *
- * A [Policy] wraps [operation]: it decides whether/how to call it (retry, log around it, rewrite
- * [i] first, short-circuit without calling it at all) and must produce an [Outcome].
+ * A [Policy] wraps [operation]. It decides whether and how to call it: retry, log around it,
+ * rewrite [i] first, or skip it entirely, and must produce an [Outcome].
  *
- * @param I : Input type
- * @param O : Output type
+ * @param I input type
+ * @param O output type
  */
 interface Policy<I, O> {
     suspend fun run(i: I, operation: suspend (I) -> Outcome<O>): Outcome<O>
@@ -22,9 +20,9 @@ interface Policy<I, O> {
 /** Composes [Policy] instances into a single pipeline. See [Policy] for why this mirrors kiit.policy. */
 object Policies {
     /**
-     * Chains [all] into one pipeline ending in [last]. Right-folded, so the *first* entry in
-     * [all] is outermost — it runs first and decides whether/how the rest of the chain (down to
-     * [last]) gets called at all.
+     * Chains [all] into one pipeline ending in [last]. Right-folded, so the first entry in [all]
+     * is outermost. It runs first and decides whether the rest of the chain, down to [last],
+     * gets called at all.
      */
     fun <I, O> chain(all: List<Policy<I, O>>, last: suspend (I) -> Outcome<O>): suspend (I) -> Outcome<O> =
         all.foldRight(last) { policy, next -> compose(policy, next) }

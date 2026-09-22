@@ -4,11 +4,12 @@ import kiit.codes.Status
 
 /**
  * Resolves the [Status] for an [HttpRpcResponse]. The default ([KiitStatusConverter]) recognizes
- * kiit's own structured error shapes (`CodeDetail`/`Problem`) first, falling back to the HTTP
- * status code table ([Int.toStatus]) — deliberately lossy, since kiit-codes only maps
- * Status→HTTP, never the reverse. A caller talking to a non-kiit API with its own structured
- * error shape (Stripe's error JSON, GitHub's, etc.) can supply their own [StatusConverter]
- * instead of (or layered in front of) the default.
+ * kiit's own structured error shapes, `CodeDetail`/`Problem`, first, falling back to the HTTP
+ * status code table ([Int.toStatus]). That fallback is deliberately lossy: kiit-codes only maps
+ * Status to HTTP, never the reverse.
+ *
+ * A caller talking to a non-kiit API with its own structured error shape (Stripe's error JSON,
+ * GitHub's, etc.) can supply their own [StatusConverter] instead.
  */
 interface StatusConverter {
     fun convert(response: HttpRpcResponse): Status
@@ -26,5 +27,5 @@ object KiitStatusConverter : StatusConverter {
     }
 }
 
-/** Convenience for the common case — see [HttpRpc]'s `statusConverter` setting for the pluggable path. */
+/** Convenience for the common case. See [HttpRpc]'s statusConverter setting for the pluggable path. */
 fun HttpRpcResponse.resolveStatus(): Status = KiitStatusConverter.convert(this)

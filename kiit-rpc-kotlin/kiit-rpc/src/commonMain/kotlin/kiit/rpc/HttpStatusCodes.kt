@@ -11,9 +11,9 @@ import kiit.codes.Unserved
 
 /**
  * Fallback used when a response carries no `CodeDetail` body (any non-kiit API). kiit-codes only
- * maps Status→HTTP ([kiit.codes.CodesToHttp]), never the reverse — many statuses share one HTTP
- * code — so this table is kiit-rpc's own: one canonical [Status] per code, picked for the closest
- * real-world HTTP semantic rather than a mechanical inversion of CodesToHttp's own overrides.
+ * maps Status to HTTP ([kiit.codes.CodesToHttp]), never the reverse, since many statuses share
+ * one HTTP code. This table is kiit-rpc's own: one canonical [Status] per code, picked for the
+ * closest real-world HTTP semantic rather than a mechanical inversion of CodesToHttp's overrides.
  */
 private val specificHttpStatusCodes: Map<Int, Status> =
     mapOf(
@@ -39,7 +39,7 @@ private val specificHttpStatusCodes: Map<Int, Status> =
         504 to Unserved.TIMEOUT,
     )
 
-/** Resolves a raw HTTP status code to a [Status] — see [specificHttpStatusCodes]. */
+/** Resolves a raw HTTP status code to a [Status]. See [specificHttpStatusCodes]. */
 fun Int.toStatus(): Status {
     specificHttpStatusCodes[this]?.let { return it }
     return when (this) {
