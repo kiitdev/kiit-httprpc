@@ -1,13 +1,13 @@
 package kiit.rpc
 
 /**
- * The final, fully-resolved request — built once per call, after query-param/auth/body
- * resolution but before the [Policy] chain and the actual Ktor call. This is what a logging or
- * diagnostics [Policy] actually sees, and it's engine-agnostic (no Ktor types leak into it).
+ * The final, fully-resolved request. Built once per call, after query-param/auth/body resolution
+ * but before the [Policy] chain and the actual Ktor call. This is what a logging or diagnostics
+ * [Policy] actually sees, and it's engine-agnostic: no Ktor types leak into it.
  *
- * [headers] includes the resolved `Authorization` header from [Auth] — a [Policy] that logs
- * headers verbatim will leak bearer tokens/basic-auth credentials. That's the caller's
- * responsibility to redact, not something guarded here.
+ * [headers] includes the resolved `Authorization` header from [Auth]. A [Policy] that logs
+ * headers verbatim will leak bearer tokens or basic-auth credentials. Redacting that is the
+ * caller's responsibility, not something guarded here.
  */
 data class HttpRpcRequest(
     val method: HttpMethod,

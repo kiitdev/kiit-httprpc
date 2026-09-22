@@ -6,9 +6,9 @@ import kotlinx.serialization.serializer
 
 /**
  * Encode/decode abstraction backing `executeResult`/`executeOutcome`. kotlinx.serialization is
- * only the *default* implementation ([KotlinxSerializer], via the [Serializer] factory below) —
- * a consumer who wants Moshi/Gson/Jackson on JVM implements this directly instead, so
- * kiit-httprpc's core API isn't hard-wired to one JSON library.
+ * only the default implementation ([KotlinxSerializer], via the [Serializer] factory below). A
+ * consumer who wants Moshi/Gson/Jackson on JVM implements this directly instead, so kiit-rpc's
+ * core API isn't hard-wired to one JSON library.
  */
 interface Serializer<T> {
     fun encode(value: T): String
@@ -27,8 +27,8 @@ class KotlinxSerializer<T>(
 
 /**
  * Reified convenience factory for the common `@Serializable` case. Kotlin-only: `reified` inline
- * functions never exist in the compiled framework, so Swift can't call this — Swift callers
- * build a [KotlinxSerializer] directly with an explicit `T.serializer()`.
+ * functions never exist in the compiled framework, so Swift can't call this. Swift callers build
+ * a [KotlinxSerializer] directly with an explicit `T.serializer()`.
  */
 @Suppress("ktlint:standard:function-naming")
 inline fun <reified T> Serializer(json: Json = Json): Serializer<T> = KotlinxSerializer(serializer(), json)

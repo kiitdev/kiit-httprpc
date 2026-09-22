@@ -1,9 +1,9 @@
 package kiit.rpc
 
 /**
- * kiit-owned response type — never leaks Ktor's own response type through the public API.
- * The `kiit.codes.Status` for a given response is resolved separately (see status resolution)
- * and carried on the `Outcome<HttpRpcResponse>` wrapper, not stored here.
+ * kiit-owned response type. Never leaks Ktor's own response type through the public API. The
+ * `kiit.codes.Status` for a response is resolved separately (see [resolveStatus]) and carried on
+ * the `Outcome<HttpRpcResponse>` wrapper, not stored here.
  */
 data class HttpRpcResponse(
     val status: Int,

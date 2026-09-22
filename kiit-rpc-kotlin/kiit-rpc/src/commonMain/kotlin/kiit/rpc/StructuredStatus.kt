@@ -96,23 +96,11 @@ private fun JsonObject.problemStatusOrNull(): Status? {
 /**
  * Reconstructs a [Status] from a response body carrying either kiit-native structured error
  * shape (`CodeDetail` or a kiit-origin `Problem`). Returns null when [body] matches neither —
- * [HttpRpcResponse.resolveStatus] falls back to [toStatus] (the HTTP status code table) then.
+ * [KiitStatusConverter] falls back to [Int.toStatus] (the HTTP status code table) then. Internal:
+ * a caller wanting this behavior goes through [StatusConverter]/[KiitStatusConverter], not this
+ * directly.
  */
-fun structuredStatusOrNull(body: String): Status? {
+internal fun structuredStatusOrNull(body: String): Status? {
     val obj = parseJsonObjectOrNull(body) ?: return null
     return obj.codeDetailStatusOrNull() ?: obj.problemStatusOrNull()
-}
-
-/**
- * Resolves the [Status] for this response: a structured kiit body ([structuredStatusOrNull])
- * takes precedence when present, falling back to the plain HTTP status code ([Int.toStatus])
- * otherwise.
- */
-fun HttpRpcResponse.resolveStatus(): Status {
-    val looksJson =
-        headers.entries.any { (key, value) ->
-            key.equals("Content-Type", ignoreCase = true) && value.contains("json", ignoreCase = true)
-        }
-    val fromBody = if (looksJson && body.isNotBlank()) structuredStatusOrNull(body) else null
-    return fromBody ?: status.toStatus()
 }
