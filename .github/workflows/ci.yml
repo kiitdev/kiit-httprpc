@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: kiit-httprpc-kotlin
+        working-directory: kiit-rpc-kotlin
     steps:
       - uses: actions/checkout@v4
 
@@ -26,19 +26,19 @@ jobs:
           cache: gradle
 
       - name: ktlint
-        run: ./gradlew :kiit-httprpc:ktlintCheck
+        run: ./gradlew :kiit-rpc:ktlintCheck
 
       - name: detekt
-        run: ./gradlew :kiit-httprpc:detekt
+        run: ./gradlew :kiit-rpc:detekt
 
       - name: JVM tests (commonTest)
-        run: ./gradlew :kiit-httprpc:jvmTest
+        run: ./gradlew :kiit-rpc:jvmTest
 
   ios-checks:
     runs-on: macos-latest
     defaults:
       run:
-        working-directory: kiit-httprpc-kotlin
+        working-directory: kiit-rpc-kotlin
     steps:
       - uses: actions/checkout@v4
 
@@ -51,4 +51,4 @@ jobs:
       # SKIE's Swift-side compile step needs Xcode/swiftc/xcrun, not just Gradle — a macOS
       # runner, same requirement kiit-codes/kiit-result already have.
       - name: iOS simulator tests (commonTest)
-        run: ./gradlew :kiit-httprpc:iosSimulatorArm64Test
+        run: ./gradlew :kiit-rpc:iosSimulatorArm64Test

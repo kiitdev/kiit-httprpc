@@ -19,9 +19,9 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "kiit-httprpc-kotlin"
+rootProject.name = "kiit-rpc-kotlin"
 
-include(":kiit-httprpc")
+include(":kiit-rpc")
 
 // sample-kotlin / sample-java are added once they have real content (see
 // _prd/kiit-httprpc/260921-setup-plan.md, Step 7) rather than included empty now.

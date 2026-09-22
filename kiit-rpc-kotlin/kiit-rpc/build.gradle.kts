@@ -33,7 +33,7 @@ kotlin {
 
     listOf(iosArm64(), iosSimulatorArm64(), iosX64()).forEach {
         it.binaries.framework {
-            baseName = "KiitHttprpc"
+            baseName = "KiitRpc"
             isStatic = true
         }
     }
@@ -73,7 +73,7 @@ skie {
 }
 
 android {
-    namespace = "kiit.httprpc"
+    namespace = "kiit.rpc"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
@@ -92,18 +92,18 @@ android {
  * signing.gnupg.keyName=
  * signing.gnupg.passphrase=
  *
- * Maven local: ~/.m2/repository/dev/kiit/kiit-httprpc/
+ * Maven local: ~/.m2/repository/dev/kiit/kiit-rpc/
  */
 mavenPublishing {
     publishToMavenCentral(automaticRelease = true)
 
     coordinates(
         groupId = "dev.kiit",
-        artifactId = "kiit-httprpc",
+        artifactId = "kiit-rpc",
         version = libraryVersion,
     )
     pom {
-        name = "kiit-httprpc"
+        name = "kiit-rpc"
         description = "Simple, declarative RPC-style HTTP client for Kotlin Multiplatform"
         url = "https://kiit.dev"
         licenses {
@@ -120,9 +120,9 @@ mavenPublishing {
             }
         }
         scm {
-            url = "https://github.com/kiitdev/kiit-httprpc"
-            connection = "scm:git:git://github.com/kiitdev/kiit-httprpc.git"
-            developerConnection = "scm:git:ssh://git@github.com/kiitdev/kiit-httprpc.git"
+            url = "https://github.com/kiitdev/kiit-rpc"
+            connection = "scm:git:git://github.com/kiitdev/kiit-rpc.git"
+            developerConnection = "scm:git:ssh://git@github.com/kiitdev/kiit-rpc.git"
         }
     }
 }

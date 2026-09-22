@@ -1,5 +1,5 @@
 // Root aggregator, no dependencies of its own.
-// The library lives in :kiit-httprpc, demo apps live under :samples.
+// The library lives in :kiit-rpc, demo apps live under :samples.
 plugins {
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.androidLibrary) apply false
