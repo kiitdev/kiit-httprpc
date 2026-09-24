@@ -3,7 +3,7 @@ package kiit.rpc
 import kiit.result.Outcome
 
 /**
- * Public contract [HttpRpc] implements. Lets a consumer mock or substitute the client in their
+ * Public contract [kiit.rpc.http.HttpRpc] implements. Lets a consumer mock or substitute the client in their
  * own tests without depending on the concrete Ktor-backed implementation.
  */
 interface RpcClient {

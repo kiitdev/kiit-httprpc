@@ -6,6 +6,8 @@ import kiit.codes.Invalid
 import kiit.codes.Unserved
 import kiit.result.Failure
 import kiit.result.Success
+import kiit.rpc.http.mockHttpRpc
+import kiit.rpc.http.respondJson
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
 import kotlin.test.Test

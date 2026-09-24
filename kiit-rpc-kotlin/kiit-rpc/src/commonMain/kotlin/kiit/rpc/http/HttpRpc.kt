@@ -1,4 +1,4 @@
-package kiit.rpc
+package kiit.rpc.http
 
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
@@ -26,6 +26,19 @@ import kiit.codes.Unserved
 import kiit.result.Failure
 import kiit.result.Outcome
 import kiit.result.Success
+import kiit.rpc.Args
+import kiit.rpc.Auth
+import kiit.rpc.Body
+import kiit.rpc.Content
+import kiit.rpc.ContentFile
+import kiit.rpc.ContentText
+import kiit.rpc.HttpMethod
+import kiit.rpc.HttpRpcPolicy
+import kiit.rpc.HttpRpcRequest
+import kiit.rpc.HttpRpcResponse
+import kiit.rpc.Meta
+import kiit.rpc.Policies
+import kiit.rpc.RpcClient
 import kotlinx.coroutines.CancellationException
 import kotlin.io.encoding.Base64
 import io.ktor.http.HttpMethod as KtorHttpMethod

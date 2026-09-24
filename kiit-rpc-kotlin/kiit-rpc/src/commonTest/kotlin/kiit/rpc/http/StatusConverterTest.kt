@@ -1,9 +1,10 @@
-package kiit.rpc
+package kiit.rpc.http
 
 import kiit.codes.Invalid
 import kiit.codes.Restricted
 import kiit.codes.StatusConstants
 import kiit.codes.Succeeded
+import kiit.rpc.HttpRpcResponse
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

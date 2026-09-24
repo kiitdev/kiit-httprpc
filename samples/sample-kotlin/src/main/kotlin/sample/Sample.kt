@@ -4,11 +4,11 @@ import kiit.rpc.Auth
 import kiit.rpc.Body
 import kiit.rpc.ExecuteParams
 import kiit.rpc.HttpMethod
-import kiit.rpc.HttpRpc
 import kiit.rpc.HttpRpcRequest
 import kiit.rpc.HttpRpcResponse
 import kiit.rpc.Policy
 import kiit.rpc.executeResult
+import kiit.rpc.http.HttpRpc
 import kiit.result.Outcome
 import kiit.result.Success
 import kotlinx.coroutines.runBlocking

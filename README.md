@@ -53,7 +53,7 @@ so you don't need to add them separately.
 **A basic call:**
 
 ```kotlin
-import kiit.rpc.HttpRpc
+import kiit.rpc.http.HttpRpc
 
 val client = HttpRpc()
 val outcome = client.get("https://httpbin.org/get", args = mapOf("q" to "hello"))
@@ -69,12 +69,18 @@ including auth, a typed call, and a logging policy.
 
 | Term | What it is |
 |---|---|
-| **`RpcClient`** | The public contract: `get`, `query`, `create`, `update`, `patch`, `delete`. `HttpRpc` is the Ktor-backed implementation. |
+| **`RpcClient`** | The public contract (`kiit.rpc`): `get`, `query`, `create`, `update`, `patch`, `delete`. `kiit.rpc.http.HttpRpc` is the Ktor-backed implementation. |
 | **`HttpRpcResponse`** | Status code, headers, body. kiit-rpc's own type, Ktor's response type never leaks through. |
 | **`Outcome<T>`** | `Result<T, Err>` from kiit-result. Every call returns `Outcome<HttpRpcResponse>`, carrying a resolved `Status`. |
 | **`Policy<I, O>`** | Wraps a call: retry, log, rewrite the request, short-circuit. A list of them chains together, first one outermost. |
 | **`Serializer<T>`** | Encode/decode abstraction behind typed calls. `KotlinxSerializer` is the default, bring your own for Moshi/Gson/Jackson. |
-| **`StatusConverter`** | Resolves the `Status` for a response. The default recognizes kiit's own structured error shapes first, falls back to the HTTP code otherwise. |
+| **`StatusConverter`** (`kiit.rpc.http`) | Resolves the `Status` for a response. The default recognizes kiit's own structured error shapes first, falls back to the HTTP code otherwise. |
+
+The public contract (`RpcClient`, `Body`, `Content`, `Auth`, `HttpRpcRequest`/`HttpRpcResponse`,
+`Policy`, `Serializer`, `ExecuteParams`) lives at `kiit.rpc`. The concrete Ktor engine and its own
+pluggable strategy objects (`HttpRpc`, `HttpRpcSettings`, `StatusConverter`) live at
+`kiit.rpc.http`, so a future non-HTTP transport can sit alongside it as its own subpackage without
+reshaping the public contract.
 
 `query` is HTTP's newer method for a GET-like call that still carries a body, read-only like GET
 but meant for searches too complex or too large for a URL. It's mapped to `POST` on the wire for
@@ -111,10 +117,10 @@ about still decodes fine.
 A `Policy<HttpRpcRequest, HttpRpcResponse>` wraps every call before it reaches the network:
 
 ```kotlin
-import kiit.rpc.HttpRpc
 import kiit.rpc.HttpRpcRequest
 import kiit.rpc.HttpRpcResponse
 import kiit.rpc.Policy
+import kiit.rpc.http.HttpRpc
 import kiit.result.Outcome
 
 class LoggingPolicy : Policy<HttpRpcRequest, HttpRpcResponse> {

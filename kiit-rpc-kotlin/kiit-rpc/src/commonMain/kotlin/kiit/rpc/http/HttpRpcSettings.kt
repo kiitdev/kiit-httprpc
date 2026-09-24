@@ -1,4 +1,4 @@
-package kiit.rpc
+package kiit.rpc.http
 
 /**
  * Client-wide configuration, translated into Ktor's `HttpTimeout` plugin + `followRedirects` at

@@ -50,7 +50,7 @@ private suspend fun <T> Outcome<HttpRpcResponse>.decode(serializer: Serializer<T
 /**
  * A custom [Serializer] can throw anything (`SerializationException`, `IllegalArgumentException`,
  * whatever the underlying JSON library uses), so a broad catch is deliberate here, same reasoning
- * as [HttpRpc]'s own network-call catch. [CancellationException] is excluded first.
+ * as [kiit.rpc.http.HttpRpc]'s own network-call catch. [CancellationException] is excluded first.
  */
 @Suppress("TooGenericExceptionCaught")
 private fun <T> decodeBody(success: Success<HttpRpcResponse>, serializer: Serializer<T>): Outcome<T> =

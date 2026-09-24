@@ -1,6 +1,7 @@
-package kiit.rpc
+package kiit.rpc.http
 
 import kiit.codes.Status
+import kiit.rpc.HttpRpcResponse
 
 /**
  * Resolves the [Status] for an [HttpRpcResponse]. The default ([KiitStatusConverter]) recognizes

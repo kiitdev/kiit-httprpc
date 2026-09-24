@@ -1,4 +1,4 @@
-package kiit.rpc
+package kiit.rpc.http
 
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
@@ -7,6 +7,10 @@ import kiit.codes.Invalid
 import kiit.codes.Succeeded
 import kiit.result.Failure
 import kiit.result.Success
+import kiit.rpc.Auth
+import kiit.rpc.Body
+import kiit.rpc.ContentText
+import kiit.rpc.HttpRpcResponse
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test

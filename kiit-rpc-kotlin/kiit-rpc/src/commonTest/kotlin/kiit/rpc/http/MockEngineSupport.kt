@@ -1,4 +1,4 @@
-package kiit.rpc
+package kiit.rpc.http
 
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
@@ -9,6 +9,7 @@ import io.ktor.client.request.HttpResponseData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
+import kiit.rpc.HttpRpcPolicy
 
 /** Builds an [HttpRpc] wired to a Ktor [MockEngine], so tests never make a real network call. */
 fun mockHttpRpc(
