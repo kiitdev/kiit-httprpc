@@ -135,11 +135,20 @@ class HttpRpc(
         )
 
     private fun buildUrl(url: String, args: Args?): String {
-        if (args.isNullOrEmpty()) return url
-        val builder = URLBuilder(url)
+        val resolved = resolveUrl(url)
+        if (args.isNullOrEmpty()) return resolved
+        val builder = URLBuilder(resolved)
         args.forEach { (key, value) -> builder.parameters.append(key, value) }
         return builder.buildString()
     }
+
+    /** Joins [url] onto [HttpRpcSettings.baseUrl], unless [url] is already absolute. */
+    private fun resolveUrl(url: String): String {
+        val base = settings.baseUrl
+        return if (base == null || url.isAbsolute()) url else "${base.trimEnd('/')}/${url.trimStart('/')}"
+    }
+
+    private fun String.isAbsolute(): Boolean = startsWith("http://") || startsWith("https://")
 
     private fun buildHeaders(meta: Meta?, auth: Auth?, body: Body?): Map<String, String> {
         val headers = LinkedHashMap<String, String>()

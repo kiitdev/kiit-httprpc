@@ -178,6 +178,51 @@ class HttpRpcTest {
         }
 
     @Test
+    fun a_relative_url_is_joined_onto_the_configured_base_url() =
+        runTest {
+            lateinit var captured: HttpRequestData
+            val settings = HttpRpcSettings(baseUrl = "https://api.example.com")
+            val client =
+                mockHttpRpc(settings = settings) { request ->
+                    captured = request
+                    respond("", HttpStatusCode.OK)
+                }
+            client.get("/users")
+
+            assertEquals("https://api.example.com/users", captured.url.toString())
+        }
+
+    @Test
+    fun base_url_and_relative_url_join_cleanly_regardless_of_slashes() =
+        runTest {
+            lateinit var captured: HttpRequestData
+            val settings = HttpRpcSettings(baseUrl = "https://api.example.com/")
+            val client =
+                mockHttpRpc(settings = settings) { request ->
+                    captured = request
+                    respond("", HttpStatusCode.OK)
+                }
+            client.get("/users")
+
+            assertEquals("https://api.example.com/users", captured.url.toString())
+        }
+
+    @Test
+    fun an_absolute_url_is_sent_as_is_even_when_a_base_url_is_configured() =
+        runTest {
+            lateinit var captured: HttpRequestData
+            val settings = HttpRpcSettings(baseUrl = "https://api.example.com")
+            val client =
+                mockHttpRpc(settings = settings) { request ->
+                    captured = request
+                    respond("", HttpStatusCode.OK)
+                }
+            client.get("https://other.example.com/status")
+
+            assertEquals("https://other.example.com/status", captured.url.toString())
+        }
+
+    @Test
     fun a_request_that_exceeds_the_configured_timeout_fails() =
         runTest {
             val settings = HttpRpcSettings(requestTimeoutMillis = 20)
