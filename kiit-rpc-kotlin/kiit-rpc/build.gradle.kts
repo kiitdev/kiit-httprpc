@@ -48,11 +48,17 @@ kotlin {
             // repo's own version catalog.
             //
             // api, not implementation: kiit-rpc's public API directly exposes both (every
-            // RpcClient method returns Outcome<HttpRpcResponse>, Policy returns Outcome,
+            // RpcClient method returns Outcome<RpcResponse>, Policy returns Outcome,
             // StatusConverter returns Status), so consumers need them on their own compile
             // classpath too, same reasoning as kiit-result's own dependency on kiit-codes.
             api("dev.kiit:kiit-codes:1.1.0")
             api("dev.kiit:kiit-result:1.0.2")
+
+            // RpcRequest/RpcResponse/RpcSettings expose Verb/Identity/Content directly (kiit-call)
+            // and Inputs/Meta directly (kiit-inputs). Resolved from the local checkout via the
+            // composite builds in settings.gradle.kts until both are actually published.
+            api("dev.kiit:kiit-call:0.0.0")
+            api("dev.kiit:kiit-inputs:0.0.0")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.forms.FormBuilder
 import io.ktor.client.request.forms.MultiPartFormDataContent
@@ -12,58 +13,62 @@ import io.ktor.client.request.header
 import io.ktor.client.request.request
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.URLBuilder
 import io.ktor.http.content.TextContent
 import io.ktor.http.encodeURLParameter
+import kiit.call.Content
+import kiit.call.ContentData
+import kiit.call.ContentFile
+import kiit.call.ContentText
+import kiit.call.ContentType
+import kiit.call.ContentTypes
+import kiit.call.Verb
 import kiit.codes.Err
 import kiit.codes.Failed
 import kiit.codes.Passed
 import kiit.codes.Unserved
+import kiit.inputs.Inputs
+import kiit.inputs.ListMap
+import kiit.inputs.Meta
+import kiit.inputs.MetaMap
 import kiit.result.Failure
 import kiit.result.Outcome
 import kiit.result.Success
-import kiit.rpc.Args
 import kiit.rpc.Auth
 import kiit.rpc.Body
-import kiit.rpc.Content
-import kiit.rpc.ContentFile
-import kiit.rpc.ContentText
-import kiit.rpc.HttpMethod
-import kiit.rpc.HttpRpcPolicy
-import kiit.rpc.HttpRpcRequest
-import kiit.rpc.HttpRpcResponse
-import kiit.rpc.Meta
 import kiit.rpc.Policies
 import kiit.rpc.RpcClient
+import kiit.rpc.RpcOptions
+import kiit.rpc.RpcPolicy
+import kiit.rpc.RpcRequest
+import kiit.rpc.RpcResponse
+import kiit.rpc.RpcSettings
+import kiit.rpc.StatusConverter
 import kotlinx.coroutines.CancellationException
 import kotlin.io.encoding.Base64
+import io.ktor.http.ContentType as KtorContentType
 import io.ktor.http.HttpMethod as KtorHttpMethod
 
-/** Bundles a call's arguments into one value, instead of six loose parameters threaded through [HttpRpc]. */
-private data class CallParams(
-    val method: HttpMethod,
-    val url: String,
-    val meta: Meta?,
-    val args: Args?,
-    val auth: Auth?,
-    val body: Body?,
-)
+private const val CALLER_ID_HEADER = "X-Caller-Id"
 
 /**
- * Ktor-backed [RpcClient]. Every call funnels through [call], the one place the [Policy] chain
- * runs, the actual network call happens (in [performCall]), and the response's
+ * Ktor-backed [RpcClient]. Every call funnels through [execute], the one place the [Policy]
+ * chain runs, the actual network call happens (in [performCall]), and the response's
  * [kiit.codes.Status] gets resolved via [statusConverter].
  */
 class HttpRpc(
-    private val settings: HttpRpcSettings = HttpRpcSettings(),
-    private val policies: List<HttpRpcPolicy> = emptyList(),
-    private val statusConverter: StatusConverter = KiitStatusConverter,
+    private val settings: RpcSettings = RpcSettings(),
+    private val policies: List<RpcPolicy> = emptyList(),
+    statusConverter: StatusConverter? = null,
     private val engine: HttpClientEngine? = null,
 ) : RpcClient {
+    private val statusConverter: StatusConverter =
+        statusConverter ?: KiitStatusConverter(parseStatusFromBody = settings.parseStatusFromBody)
+
     private val client: HttpClient by lazy { buildClient() }
 
     private fun buildClient(): HttpClient {
@@ -84,78 +89,59 @@ class HttpRpc(
         followRedirects = settings.followRedirects
     }
 
-    override suspend fun get(
-        url: String,
-        meta: Meta?,
-        args: Args?,
-        auth: Auth?,
-    ): Outcome<HttpRpcResponse> = call(CallParams(HttpMethod.Get, url, meta, args, auth, null))
-
-    override suspend fun query(
-        url: String,
-        meta: Meta?,
-        args: Args?,
-        auth: Auth?,
-        body: Body?,
-    ): Outcome<HttpRpcResponse> = call(CallParams(HttpMethod.Query, url, meta, args, auth, body))
-
-    override suspend fun create(
-        url: String,
-        meta: Meta?,
-        args: Args?,
-        auth: Auth?,
-        body: Body?,
-    ): Outcome<HttpRpcResponse> = call(CallParams(HttpMethod.Post, url, meta, args, auth, body))
-
-    override suspend fun update(
-        url: String,
-        meta: Meta?,
-        args: Args?,
-        auth: Auth?,
-        body: Body?,
-    ): Outcome<HttpRpcResponse> = call(CallParams(HttpMethod.Put, url, meta, args, auth, body))
-
-    override suspend fun patch(
-        url: String,
-        meta: Meta?,
-        args: Args?,
-        auth: Auth?,
-        body: Body?,
-    ): Outcome<HttpRpcResponse> = call(CallParams(HttpMethod.Patch, url, meta, args, auth, body))
-
-    override suspend fun delete(
-        url: String,
-        meta: Meta?,
-        args: Args?,
-        auth: Auth?,
-        body: Body?,
-    ): Outcome<HttpRpcResponse> = call(CallParams(HttpMethod.Delete, url, meta, args, auth, body))
-
-    private suspend fun call(params: CallParams): Outcome<HttpRpcResponse> {
-        val effectiveBody = if (params.method == HttpMethod.Get) null else params.body
-        val request = buildRequest(params, effectiveBody)
-        val multipart = effectiveBody as? Body.MultiPart
-        val pipeline = Policies.chain(policies) { req -> performCall(req, multipart) }
-        return pipeline(request)
+    /**
+     * Merges [RpcSettings]' client-wide defaults into [request] before the policy chain runs, so
+     * a [RpcPolicy] sees the almost-final request: base URL already joined with query args,
+     * headers already merged with `defaultHeaders`/content-type/auth/caller id. This matches
+     * how Ktor's own `Logging` plugin sees a request, after `DefaultRequest` resolves, not before.
+     */
+    private fun resolveRequest(request: RpcRequest): RpcRequest {
+        val url = buildUrl(request.url, request.args)
+        val auth = request.auth ?: settings.defaultAuth
+        val meta = mergedMeta(request.meta, request.data, auth)
+        return request.copy(url = url, args = null, meta = meta, auth = auth)
     }
 
-    private fun buildRequest(params: CallParams, effectiveBody: Body?): HttpRpcRequest =
-        HttpRpcRequest(
-            method = params.method,
-            url = buildUrl(params.url, params.args),
-            headers = buildHeaders(params.meta, params.auth, effectiveBody),
-            body = resolveBodyText(effectiveBody),
-        )
+    override suspend fun execute(request: RpcRequest): Outcome<RpcResponse> {
+        val effectiveData = if (request.verb == Verb.Get) null else request.data
+        val multipart = effectiveData as? Body.MultiPart
+        val resolved = resolveRequest(request.copy(data = effectiveData))
+        val pipeline = Policies.chain(policies) { req -> performCall(req, multipart) }
+        return pipeline(resolved)
+    }
 
-    private fun buildUrl(url: String, args: Args?): String {
+    /**
+     * Different Ktor engines throw different exception types for the same conceptual failure
+     * (connection refused, DNS failure, TLS error), so a broad catch is the correct choice here,
+     * not an oversight. [CancellationException] is excluded first, so cancelling the caller's
+     * coroutine is never mistaken for a failed call.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun performCall(request: RpcRequest, multipart: Body.MultiPart?): Outcome<RpcResponse> =
+        try {
+            val response =
+                client.request(request.url) {
+                    method = request.verb.toKtorMethod()
+                    request.meta?.keys()?.forEach { key -> header(key, request.meta.get(key)?.toString() ?: "") }
+                    applyTimeoutOverride(request.options)
+                    applyBody(request.data, multipart)
+                }
+            toOutcome(response)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Failure(Err.ex(e), Unserved.UNEXPECTED)
+        }
+
+    private fun buildUrl(url: String, args: Inputs?): String {
         val resolved = resolveUrl(url)
-        if (args.isNullOrEmpty()) return resolved
+        if (args == null || args.keys().isEmpty()) return resolved
         val builder = URLBuilder(resolved)
-        args.forEach { (key, value) -> builder.parameters.append(key, value) }
+        args.keys().forEach { key -> builder.parameters.append(key, args.get(key)?.toString() ?: "") }
         return builder.buildString()
     }
 
-    /** Joins [url] onto [HttpRpcSettings.baseUrl], unless [url] is already absolute. */
+    /** Joins [url] onto [RpcSettings.baseUrl], unless [url] is already absolute. */
     private fun resolveUrl(url: String): String {
         val base = settings.baseUrl
         return if (base == null || url.isAbsolute()) url else "${base.trimEnd('/')}/${url.trimStart('/')}"
@@ -163,13 +149,15 @@ class HttpRpc(
 
     private fun String.isAbsolute(): Boolean = startsWith("http://") || startsWith("https://")
 
-    private fun buildHeaders(meta: Meta?, auth: Auth?, body: Body?): Map<String, String> {
-        val headers = LinkedHashMap<String, String>()
-        headers.putAll(settings.defaultHeaders)
-        meta?.let { headers.putAll(it) }
-        contentTypeFor(body)?.let { headers[HttpHeaders.ContentType] = it }
-        authHeader(auth)?.let { (key, value) -> headers[key] = value }
-        return headers
+    /** Order: `defaultHeaders`, then the call's own `meta` (can override defaults), then content-type/auth/caller id. */
+    private fun mergedMeta(requestMeta: Inputs?, data: Body?, auth: Auth?): Inputs {
+        val merged = LinkedHashMap<String, String>()
+        settings.defaultHeaders.keys().forEach { key -> merged[key] = settings.defaultHeaders.get(key)?.toString() ?: "" }
+        requestMeta?.keys()?.forEach { key -> merged[key] = requestMeta.get(key)?.toString() ?: "" }
+        contentTypeFor(data)?.let { merged[HttpHeaders.ContentType] = it }
+        authHeader(auth)?.let { (key, value) -> merged[key] = value }
+        settings.callerId?.let { merged[CALLER_ID_HEADER] = it.id }
+        return MetaMap(ListMap(merged.toList()))
     }
 
     /** Multipart's Content-Type (with boundary) is set by Ktor itself, see [buildMultiPartBody]. */
@@ -193,11 +181,30 @@ class HttpRpc(
         return "Basic " + Base64.Default.encode(credentials)
     }
 
-    /** [Policy] can only see/rewrite this string, so [Body.MultiPart] gets a placeholder, not its actual bytes. */
+    private fun HttpRequestBuilder.applyTimeoutOverride(options: RpcOptions?) {
+        if (options == null) return
+        timeout {
+            options.requestTimeoutMillis?.let { requestTimeoutMillis = it }
+            options.connectTimeoutMillis?.let { connectTimeoutMillis = it }
+            options.socketTimeoutMillis?.let { socketTimeoutMillis = it }
+        }
+    }
+
+    /** [multipart] takes precedence: it carries the real bytes/boundary, [data] is resolved to text otherwise. */
+    private fun HttpRequestBuilder.applyBody(data: Body?, multipart: Body.MultiPart?) {
+        when {
+            multipart != null -> setBody(buildMultiPartBody(multipart))
+            data != null -> {
+                val text = resolveBodyText(data) ?: ""
+                val contentType = contentTypeFor(data)?.let(KtorContentType::parse) ?: KtorContentType.Text.Plain
+                setBody(TextContent(text, contentType))
+            }
+        }
+    }
+
     private fun resolveBodyText(body: Body?): String? =
         when (body) {
-            null -> null
-            is Body.MultiPart -> "<multipart: ${body.values.size} part(s)>"
+            null, is Body.MultiPart -> null
             is Body.FormData -> encodeFormData(body.values)
             is Body.RawContent -> body.content
             is Body.JsonContent -> body.content
@@ -209,39 +216,6 @@ class HttpRpc(
             "${key.encodeURLParameter(spaceToPlus = true)}=${value.encodeURLParameter(spaceToPlus = true)}"
         }
 
-    /**
-     * Different Ktor engines throw different exception types for the same conceptual failure
-     * (connection refused, DNS failure, TLS error), so a broad catch is the correct choice here,
-     * not an oversight. [CancellationException] is excluded first, so cancelling the caller's
-     * coroutine is never mistaken for a failed call.
-     */
-    @Suppress("TooGenericExceptionCaught")
-    private suspend fun performCall(request: HttpRpcRequest, multipart: Body.MultiPart?): Outcome<HttpRpcResponse> =
-        try {
-            val response =
-                client.request(request.url) {
-                    method = request.method.toKtorMethod()
-                    request.headers.forEach { (key, value) -> header(key, value) }
-                    applyBody(request, multipart)
-                }
-            toOutcome(response)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Failure(Err.ex(e), Unserved.UNEXPECTED)
-        }
-
-    /** [multipart] takes precedence: it carries the real bytes/boundary, [request].body is just the placeholder. */
-    private fun HttpRequestBuilder.applyBody(request: HttpRpcRequest, multipart: Body.MultiPart?) {
-        when {
-            multipart != null -> setBody(buildMultiPartBody(multipart))
-            request.body != null -> setBody(TextContent(request.body, contentTypeOf(request)))
-        }
-    }
-
-    private fun contentTypeOf(request: HttpRpcRequest): ContentType =
-        request.headers[HttpHeaders.ContentType]?.let(ContentType::parse) ?: ContentType.Text.Plain
-
     private fun buildMultiPartBody(multipart: Body.MultiPart): MultiPartFormDataContent =
         MultiPartFormDataContent(
             formData {
@@ -251,7 +225,8 @@ class HttpRpc(
 
     private fun FormBuilder.appendPart(name: String, content: Content) {
         when (content) {
-            is ContentText -> append(name, content.text)
+            is ContentText -> append(name, content.raw)
+            is ContentData -> append(name, content.raw ?: content.data.decodeToString())
             is ContentFile -> appendFilePart(name, content)
         }
     }
@@ -259,23 +234,55 @@ class HttpRpc(
     private fun FormBuilder.appendFilePart(name: String, content: ContentFile) {
         val partHeaders =
             Headers.build {
-                append(HttpHeaders.ContentType, content.type.http)
+                append(HttpHeaders.ContentType, content.tpe.http)
                 append(HttpHeaders.ContentDisposition, "filename=\"${content.name}\"")
             }
         append(name, content.data, partHeaders)
     }
 
-    private suspend fun toOutcome(response: HttpResponse): Outcome<HttpRpcResponse> {
-        val httpRpcResponse =
-            HttpRpcResponse(
-                status = response.status.value,
-                headers = response.headers.entries().associate { it.key to (it.value.firstOrNull() ?: "") },
-                body = response.bodyAsText(),
-            )
-        return when (val status = statusConverter.convert(httpRpcResponse)) {
-            is Passed -> Success(httpRpcResponse, status)
-            is Failed -> Failure(Err.of(status), status)
+    private suspend fun toOutcome(response: HttpResponse): Outcome<RpcResponse> {
+        val meta = buildResponseMeta(response)
+        val data = readContent(response)
+        val rpcResponse = RpcResponse(status = response.status.value, data = data, meta = meta)
+        return when (val status = statusConverter.convert(rpcResponse)) {
+            is Passed -> Success(rpcResponse, status)
+            is Failed -> Failure(Err.ErrorInfo(status.message, ref = rpcResponse), status)
         }
+    }
+
+    /** Preserves every value for a repeated header (e.g. multiple `Set-Cookie`), not just the first. */
+    private fun buildResponseMeta(response: HttpResponse): Meta {
+        val pairs = response.headers.entries().flatMap { (key, values) -> values.map { value -> key to value } }
+        return MetaMap(ListMap(pairs))
+    }
+
+    /** Never forces a binary response through text decoding, see [isTextContentType]. */
+    private suspend fun readContent(response: HttpResponse): Content {
+        val ktorContentType = ktorContentTypeOf(response)
+        val tpe = ContentType(ktorContentType?.toString() ?: ContentTypes.Octet.http, "")
+        if (isTextContentType(ktorContentType)) {
+            val text = response.bodyAsText()
+            return ContentText(text.encodeToByteArray(), text, tpe)
+        }
+        val bytes = response.bodyAsBytes()
+        val filename = contentDispositionFilename(response)
+        return if (filename != null) ContentFile(filename, bytes, null, tpe) else ContentData(bytes, null, tpe)
+    }
+
+    private fun ktorContentTypeOf(response: HttpResponse): KtorContentType? =
+        response.headers[HttpHeaders.ContentType]?.let(KtorContentType::parse)
+
+    private fun isTextContentType(contentType: KtorContentType?): Boolean {
+        if (contentType == null) return true
+        if (contentType.contentType.equals("text", ignoreCase = true)) return true
+        val sub = contentType.contentSubtype.lowercase()
+        return sub == "json" || sub == "xml" || sub.endsWith("+json") || sub.endsWith("+xml")
+    }
+
+    private fun contentDispositionFilename(response: HttpResponse): String? {
+        val header = response.headers[HttpHeaders.ContentDisposition] ?: return null
+        val match = Regex("filename=\"?([^\";]+)\"?").find(header) ?: return null
+        return match.groupValues[1]
     }
 
     /**
@@ -285,13 +292,14 @@ class HttpRpc(
      * and needs no server-side QUERY support, at the cost of QUERY's safe/idempotent-like-GET
      * semantic.
      */
-    private fun HttpMethod.toKtorMethod(): KtorHttpMethod =
+    private fun Verb.toKtorMethod(): KtorHttpMethod =
         when (this) {
-            HttpMethod.Get -> KtorHttpMethod.Get
-            HttpMethod.Query -> KtorHttpMethod.Post
-            HttpMethod.Post -> KtorHttpMethod.Post
-            HttpMethod.Put -> KtorHttpMethod.Put
-            HttpMethod.Patch -> KtorHttpMethod.Patch
-            HttpMethod.Delete -> KtorHttpMethod.Delete
+            Verb.Get -> KtorHttpMethod.Get
+            Verb.Query -> KtorHttpMethod.Post
+            Verb.Create -> KtorHttpMethod.Post
+            Verb.Update -> KtorHttpMethod.Put
+            Verb.Patch -> KtorHttpMethod.Patch
+            Verb.Delete -> KtorHttpMethod.Delete
+            Verb.Execute -> KtorHttpMethod.Post
         }
 }

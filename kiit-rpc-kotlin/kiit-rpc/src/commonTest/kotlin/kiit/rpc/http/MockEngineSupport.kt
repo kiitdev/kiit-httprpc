@@ -9,16 +9,17 @@ import io.ktor.client.request.HttpResponseData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
-import kiit.rpc.HttpRpcPolicy
+import kiit.rpc.RpcPolicy
+import kiit.rpc.RpcSettings
 
 /** Builds an [HttpRpc] wired to a Ktor [MockEngine], so tests never make a real network call. */
 fun mockHttpRpc(
-    settings: HttpRpcSettings = HttpRpcSettings(),
-    policies: List<HttpRpcPolicy> = emptyList(),
+    settings: RpcSettings = RpcSettings(),
+    policies: List<RpcPolicy> = emptyList(),
     handler: MockRequestHandler,
 ): HttpRpc = HttpRpc(settings = settings, policies = policies, engine = MockEngine(handler))
 
-/** Shorthand for a JSON response — the common case across these tests. */
+/** Shorthand for a JSON response, the common case across these tests. */
 fun MockRequestHandleScope.respondJson(json: String, status: HttpStatusCode = HttpStatusCode.OK): HttpResponseData =
     respond(json, status, headersOf(HttpHeaders.ContentType, "application/json"))
 
