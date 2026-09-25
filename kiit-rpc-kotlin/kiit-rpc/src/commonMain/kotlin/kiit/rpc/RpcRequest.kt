@@ -33,8 +33,12 @@ data class RpcRequest(
     val options: RpcOptions? = null,
 ) {
     companion object {
-        fun get(url: String, meta: Inputs? = null, args: Inputs? = null, auth: Auth? = null): RpcRequest =
-            RpcRequest(verb = Verb.Get, url = url, meta = meta, args = args, auth = auth)
+        fun get(
+            url: String,
+            meta: Inputs? = null,
+            args: Inputs? = null,
+            auth: Auth? = null,
+        ): RpcRequest = RpcRequest(verb = Verb.Get, url = url, meta = meta, args = args, auth = auth)
 
         fun query(
             url: String,
@@ -68,7 +72,11 @@ data class RpcRequest(
             data: Body? = null,
         ): RpcRequest = RpcRequest(verb = Verb.Patch, url = url, meta = meta, args = args, data = data, auth = auth)
 
-        fun delete(url: String, meta: Inputs? = null, args: Inputs? = null, auth: Auth? = null): RpcRequest =
-            RpcRequest(verb = Verb.Delete, url = url, meta = meta, args = args, auth = auth)
+        fun delete(
+            url: String,
+            meta: Inputs? = null,
+            args: Inputs? = null,
+            auth: Auth? = null,
+        ): RpcRequest = RpcRequest(verb = Verb.Delete, url = url, meta = meta, args = args, auth = auth)
     }
 }

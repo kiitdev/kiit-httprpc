@@ -4,9 +4,14 @@ import kiit.codes.Invalid
 import kiit.codes.Rejected
 import kiit.codes.Restricted
 import kiit.codes.StatusConstants
+import kiit.inputs.ListMap
+import kiit.inputs.Meta
+import kiit.inputs.MetaMap
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+
+private fun metaOf(vararg pairs: Pair<String, String>): Meta = MetaMap(ListMap(pairs.toList()))
 
 class StructuredStatusTest {
     @Test
@@ -55,5 +60,33 @@ class StructuredStatusTest {
     @Test
     fun a_json_object_missing_required_fields_returns_null() {
         assertNull(structuredStatusOrNull("""{"code":"Failed:Invalid:INVALID_VALUE"}"""))
+    }
+
+    @Test
+    fun header_with_a_custom_origin_decodes_scope_group_and_code_by_position() {
+        val meta = metaOf("x-server-status-rfc9457" to "https://stripe.com/problems/payments.cards/rejected/duplicate-charge")
+        val expected = Rejected("DUPLICATE_CHARGE", "", "stripe.com", "payments.cards")
+        assertEquals(expected, headerStatusOrNull(meta))
+    }
+
+    @Test
+    fun header_title_becomes_the_status_message() {
+        val meta =
+            metaOf(
+                "x-server-status-rfc9457" to "https://stripe.com/problems/payments.cards/rejected/duplicate-charge",
+                "x-server-status-rfc9457-title" to "This charge has already been processed",
+            )
+        val expected = Rejected("DUPLICATE_CHARGE", "This charge has already been processed", "stripe.com", "payments.cards")
+        assertEquals(expected, headerStatusOrNull(meta))
+    }
+
+    @Test
+    fun missing_header_returns_null() {
+        assertNull(headerStatusOrNull(metaOf()))
+    }
+
+    @Test
+    fun header_with_too_few_path_segments_returns_null() {
+        assertNull(headerStatusOrNull(metaOf("x-server-status-rfc9457" to "https://stripe.com/rejected")))
     }
 }

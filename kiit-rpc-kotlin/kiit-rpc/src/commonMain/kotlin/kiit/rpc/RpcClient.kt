@@ -13,8 +13,12 @@ import kiit.result.Outcome
 interface RpcClient {
     suspend fun execute(request: RpcRequest): Outcome<RpcResponse>
 
-    suspend fun get(url: String, meta: Inputs? = null, args: Inputs? = null, auth: Auth? = null): Outcome<RpcResponse> =
-        execute(RpcRequest.get(url, meta, args, auth))
+    suspend fun get(
+        url: String,
+        meta: Inputs? = null,
+        args: Inputs? = null,
+        auth: Auth? = null,
+    ): Outcome<RpcResponse> = execute(RpcRequest.get(url, meta, args, auth))
 
     suspend fun query(
         url: String,
@@ -48,6 +52,10 @@ interface RpcClient {
         data: Body? = null,
     ): Outcome<RpcResponse> = execute(RpcRequest.patch(url, meta, args, auth, data))
 
-    suspend fun delete(url: String, meta: Inputs? = null, args: Inputs? = null, auth: Auth? = null): Outcome<RpcResponse> =
-        execute(RpcRequest.delete(url, meta, args, auth))
+    suspend fun delete(
+        url: String,
+        meta: Inputs? = null,
+        args: Inputs? = null,
+        auth: Auth? = null,
+    ): Outcome<RpcResponse> = execute(RpcRequest.delete(url, meta, args, auth))
 }

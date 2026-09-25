@@ -1,12 +1,16 @@
 package sample
 
+import kiit.call.Contents
+import kiit.inputs.Inputs
+import kiit.inputs.ListMap
+import kiit.inputs.MetaMap
 import kiit.rpc.Auth
 import kiit.rpc.Body
-import kiit.rpc.ExecuteParams
-import kiit.rpc.HttpMethod
-import kiit.rpc.HttpRpcRequest
-import kiit.rpc.HttpRpcResponse
-import kiit.rpc.Policy
+import kiit.rpc.RpcOptions
+import kiit.rpc.RpcPolicy
+import kiit.rpc.RpcRequest
+import kiit.rpc.RpcResponse
+import kiit.rpc.RpcSettings
 import kiit.rpc.executeResult
 import kiit.rpc.http.HttpRpc
 import kiit.result.Outcome
@@ -15,8 +19,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 
 /**
- * Canonical sample for kiit-rpc. One running example against httpbin.org, in four parts:
- * 1. Basic calls, 2. Auth, 3. Typed decode, 4. Policy.
+ * Canonical sample for kiit-rpc. One running example against httpbin.org, in five parts:
+ * 1. Basic calls, 2. Auth, 3. Typed decode, 4. Policy, 5. Settings/per-call options.
  *
  * Every example is wrapped in `// <example id="..." tags="...">` ... `// </example>` so it can be
  * extracted for the docs later, matching kiit-codes' sample. The `verify(...)` calls sit outside
@@ -38,6 +42,8 @@ private fun section(title: String) {
     println("=".repeat(60))
 }
 
+private fun inputsOf(vararg pairs: Pair<String, String>): Inputs = MetaMap(ListMap(pairs.toList()))
+
 // ============================================================
 // Part 1: Basic calls
 // ============================================================
@@ -47,13 +53,13 @@ private suspend fun showBasicCalls(client: HttpRpc) {
 
     // <example id="basic-get" tags="calls">
     // A GET with query params, no body. args become the URL's query string.
-    val getOutcome = client.get("https://httpbin.org/get", args = mapOf("greeting" to "hello"))
+    val getOutcome = client.get("https://httpbin.org/get", args = inputsOf("greeting" to "hello"))
     // </example>
     verify("basic-get: succeeded", getOutcome is Success)
 
     // <example id="basic-create" tags="calls">
     // create (POST) with a JSON body.
-    val createOutcome = client.create("https://httpbin.org/post", body = Body.JsonContent("""{"name":"Ada"}"""))
+    val createOutcome = client.create("https://httpbin.org/post", data = Body.JsonContent("""{"name":"Ada"}"""))
     // </example>
     verify("basic-create: succeeded", createOutcome is Success)
 }
@@ -71,7 +77,8 @@ private suspend fun showAuth(client: HttpRpc) {
     // </example>
     verify("auth-bearer: succeeded", outcome is Success)
     if (outcome is Success) {
-        verify("auth-bearer: token echoed back", outcome.value.body.contains("demo-token"))
+        val text = Contents.toText(outcome.value.data) ?: ""
+        verify("auth-bearer: token echoed back", text.contains("demo-token"))
     }
 }
 
@@ -87,7 +94,7 @@ private suspend fun showTypedDecode(client: HttpRpc) {
 
     // <example id="typed-executeResult" tags="typed">
     // executeResult<T> calls and decodes the body into T in one step.
-    val result = client.executeResult<HttpBinGet>(ExecuteParams(HttpMethod.Get, "https://httpbin.org/get"))
+    val result = client.executeResult<HttpBinGet>(RpcRequest.get("https://httpbin.org/get"))
     // </example>
     result.onSuccess { println("decoded url: ${it.url}") }
     verify("typed-executeResult: decoded", result.getOrNull()?.url?.contains("httpbin.org/get") == true)
@@ -98,13 +105,14 @@ private suspend fun showTypedDecode(client: HttpRpc) {
 // ============================================================
 
 // <example id="policy-logging" tags="policy">
-// A Policy that logs before and after the call it wraps.
-private class LoggingPolicy : Policy<HttpRpcRequest, HttpRpcResponse> {
+// A Policy that logs before and after the call it wraps. It sees the almost-final request,
+// after RpcSettings' defaults are merged in, the same way Ktor's own Logging plugin does.
+private class LoggingPolicy : RpcPolicy {
     override suspend fun run(
-        i: HttpRpcRequest,
-        operation: suspend (HttpRpcRequest) -> Outcome<HttpRpcResponse>,
-    ): Outcome<HttpRpcResponse> {
-        println("-> ${i.method} ${i.url}")
+        i: RpcRequest,
+        operation: suspend (RpcRequest) -> Outcome<RpcResponse>,
+    ): Outcome<RpcResponse> {
+        println("-> ${i.verb} ${i.url}")
         val outcome = operation(i)
         println("<- ${outcome.status.name}")
         return outcome
@@ -123,6 +131,29 @@ private suspend fun showPolicy() {
     verify("policy-attach: succeeded", outcome is Success)
 }
 
+// ============================================================
+// Part 5: Settings and per-call options
+// ============================================================
+
+private suspend fun showSettings() {
+    section("Part 5: Settings and per-call options")
+
+    // <example id="settings-base-url" tags="settings">
+    // baseUrl lets every call pass a relative path instead of the full URL.
+    val client = HttpRpc(settings = RpcSettings(baseUrl = "https://httpbin.org"))
+    val outcome = client.get("/get")
+    // </example>
+    verify("settings-base-url: succeeded", outcome is Success)
+
+    // <example id="options-per-call-timeout" tags="settings">
+    // RpcOptions overrides RpcSettings' timeouts for just this one call. /delay/2 takes 2s to
+    // respond, a 50ms request timeout fails it well before that, without affecting other calls.
+    val request = RpcRequest.get("https://httpbin.org/delay/2").copy(options = RpcOptions(requestTimeoutMillis = 50))
+    val timedOut = client.execute(request)
+    // </example>
+    verify("options-per-call-timeout: failed as expected", timedOut !is Success)
+}
+
 fun main() =
     runBlocking {
         val client = HttpRpc()
@@ -130,6 +161,7 @@ fun main() =
         showAuth(client)
         showTypedDecode(client)
         showPolicy()
+        showSettings()
 
         println()
         println("All $checks checks passed.")

@@ -4,7 +4,7 @@
 
 **A simple, declarative Kotlin Multiplatform client for RPC-style HTTP calls.**
 
-Every call returns an `Outcome<HttpRpcResponse>` carrying a status that classifies the kind of
+Every call returns an `Outcome<RpcResponse>` carrying a status that classifies the kind of
 success or failure, instead of just a raw response object or a thrown exception. That status
 comes from kiit-codes, the same taxonomy kiit-result already builds on. `get`, `query`, `create`,
 `update`, `patch`, and `delete` all funnel through one pipeline: build the request, run it through
@@ -25,6 +25,7 @@ Part of [Kiit](https://www.kiit.dev)
 - [Concepts](#concepts)
 - [Typed calls](#typed-calls)
 - [Policies](#policies)
+- [Settings and per-call options](#settings-and-per-call-options)
 - [Usage](#usage)
 - [Requirements](#requirements)
 - [License](#license)
@@ -35,7 +36,7 @@ Most HTTP clients hand back either a response you inspect yourself or an excepti
 Neither tells you what *kind* of outcome you got, just that something happened. kiit-rpc pairs
 every call with kiit-codes' status taxonomy: a 404 resolves to `Invalid.NOT_FOUND`, a 401 to
 `Restricted.UNAUTHENTICATED`, and so on, whether the server is kiit-based (it can embed the exact
-status in the response body) or any other API (the plain HTTP code maps to the closest match).
+status in a response header) or any other API (the plain HTTP code maps to the closest match).
 
 ## Start
 
@@ -47,38 +48,52 @@ dependencies {
 }
 ```
 
-`kiit-rpc` depends on `dev.kiit:kiit-codes` and `dev.kiit:kiit-result` transitively (both `api`),
-so you don't need to add them separately.
+`kiit-rpc` depends on `dev.kiit:kiit-codes`, `dev.kiit:kiit-result`, `dev.kiit:kiit-call`, and
+`dev.kiit:kiit-inputs` transitively (all `api`), so you don't need to add any of them separately.
 
 **A basic call:**
 
 ```kotlin
+import kiit.call.Contents
 import kiit.rpc.http.HttpRpc
 
 val client = HttpRpc()
-val outcome = client.get("https://httpbin.org/get", args = mapOf("q" to "hello"))
+val outcome = client.get("https://httpbin.org/get")
 
-outcome.onSuccess { response -> println(response.body) }
+outcome.onSuccess { response -> println(Contents.toText(response.data)) }
     .onFailure { err -> println("failed: ${err.message}") }
 ```
 
+Query params (`args`) and headers (`meta`) are `kiit.inputs.Inputs`, not a plain `Map`:
+
+```kotlin
+import kiit.inputs.ListMap
+import kiit.inputs.MetaMap
+
+val args = MetaMap(ListMap(listOf("q" to "hello")))
+client.get("https://httpbin.org/get", args = args)
+```
+
 See [`samples/sample-kotlin`](./samples/sample-kotlin) for a runnable end-to-end example,
-including auth, a typed call, and a logging policy.
+including auth, a typed call, a logging policy, and per-call settings.
 
 ## Concepts
 
 | Term | What it is |
 |---|---|
-| **`RpcClient`** | The public contract (`kiit.rpc`): `get`, `query`, `create`, `update`, `patch`, `delete`. `kiit.rpc.http.HttpRpc` is the Ktor-backed implementation. |
-| **`HttpRpcResponse`** | Status code, headers, body. kiit-rpc's own type, Ktor's response type never leaks through. |
-| **`Outcome<T>`** | `Result<T, Err>` from kiit-result. Every call returns `Outcome<HttpRpcResponse>`, carrying a resolved `Status`. |
-| **`Policy<I, O>`** | Wraps a call: retry, log, rewrite the request, short-circuit. A list of them chains together, first one outermost. |
+| **`RpcClient`** (`kiit.rpc`) | The public contract: `execute` is the one abstract method, `get`/`query`/`create`/`update`/`patch`/`delete` are defaults built on top of it. `kiit.rpc.http.HttpRpc` is the Ktor-backed implementation. |
+| **`RpcRequest`** | The caller-facing, outbound mirror of kiit-requests' `Request`: `verb`/`url`/`meta`/`args`/`data`/`auth`/`version`/`trace`/`options`. A flat `url`, not the area/name/action convention, since an outbound call isn't necessarily hitting a kiit API. |
+| **`RpcResponse`** | `status`/`data`/`meta`. `data` is a `kiit.call.Content` (`ContentText`/`ContentFile`/`ContentData`), never forced through text decoding, so a binary response comes back with its bytes intact. `meta` is a `kiit.inputs.Meta`, preserving every value for a repeated header like `Set-Cookie`. |
+| **`Outcome<T>`** | `Result<T, Err>` from kiit-result. Every call returns `Outcome<RpcResponse>`, carrying a resolved `Status`. On failure, `Err.ref` carries the original `RpcResponse`, so nothing is lost even when the status alone doesn't say enough. |
+| **`RpcSettings`** | Client-wide config: `baseUrl`, `defaultHeaders`, `defaultAuth`, `callerId`, timeouts, `followRedirects`, `parseStatusFromBody`. |
+| **`RpcOptions`** | Per-call override of `RpcSettings`' timeouts, via `RpcRequest.options`. |
+| **`Policy<I, O>`** (`RpcPolicy` = `Policy<RpcRequest, RpcResponse>`) | Wraps a call: retry, log, rewrite the request, short-circuit. A list of them chains together, first one outermost. Sees the request after `RpcSettings`' defaults are merged in, the same way Ktor's own `Logging` plugin sees a request after `DefaultRequest` resolves. |
 | **`Serializer<T>`** | Encode/decode abstraction behind typed calls. `KotlinxSerializer` is the default, bring your own for Moshi/Gson/Jackson. |
-| **`StatusConverter`** (`kiit.rpc.http`) | Resolves the `Status` for a response. The default recognizes kiit's own structured error shapes first, falls back to the HTTP code otherwise. |
+| **`StatusConverter`** (`kiit.rpc`, default impl `kiit.rpc.http.KiitStatusConverter`) | Resolves the `Status` for a response: checks the `x-server-status-rfc9457` header first, then optionally the body (`RpcSettings.parseStatusFromBody`, off by default), then falls back to the HTTP status code. |
 
-The public contract (`RpcClient`, `Body`, `Content`, `Auth`, `HttpRpcRequest`/`HttpRpcResponse`,
-`Policy`, `Serializer`, `ExecuteParams`) lives at `kiit.rpc`. The concrete Ktor engine and its own
-pluggable strategy objects (`HttpRpc`, `HttpRpcSettings`, `StatusConverter`) live at
+The public contract (`RpcClient`, `RpcRequest`, `RpcResponse`, `RpcSettings`, `RpcOptions`,
+`StatusConverter`, `Auth`, `Body`, `Policy`, `Serializer`) lives at `kiit.rpc`. The concrete Ktor
+engine and its own pluggable strategy objects (`HttpRpc`, `KiitStatusConverter`) live at
 `kiit.rpc.http`, so a future non-HTTP transport can sit alongside it as its own subpackage without
 reshaping the public contract.
 
@@ -93,14 +108,13 @@ actually present.
 `executeResult`/`executeOutcome` call and decode the response body into a type in one step:
 
 ```kotlin
-import kiit.rpc.ExecuteParams
-import kiit.rpc.HttpMethod
+import kiit.rpc.RpcRequest
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class User(val id: Int, val name: String)
 
-val result = client.executeResult<User>(ExecuteParams(HttpMethod.Get, "https://api.example.com/users/1"))
+val result = client.executeResult<User>(RpcRequest.get("https://api.example.com/users/1"))
 ```
 
 `executeResult` returns a `Try<T>` (`Result<T, Throwable>`), `executeOutcome` returns an
@@ -114,21 +128,21 @@ about still decodes fine.
 
 ## Policies
 
-A `Policy<HttpRpcRequest, HttpRpcResponse>` wraps every call before it reaches the network:
+An `RpcPolicy` wraps every call before it reaches the network:
 
 ```kotlin
-import kiit.rpc.HttpRpcRequest
-import kiit.rpc.HttpRpcResponse
-import kiit.rpc.Policy
-import kiit.rpc.http.HttpRpc
 import kiit.result.Outcome
+import kiit.rpc.RpcPolicy
+import kiit.rpc.RpcRequest
+import kiit.rpc.RpcResponse
+import kiit.rpc.http.HttpRpc
 
-class LoggingPolicy : Policy<HttpRpcRequest, HttpRpcResponse> {
+class LoggingPolicy : RpcPolicy {
     override suspend fun run(
-        i: HttpRpcRequest,
-        operation: suspend (HttpRpcRequest) -> Outcome<HttpRpcResponse>,
-    ): Outcome<HttpRpcResponse> {
-        println("-> ${i.method} ${i.url}")
+        i: RpcRequest,
+        operation: suspend (RpcRequest) -> Outcome<RpcResponse>,
+    ): Outcome<RpcResponse> {
+        println("-> ${i.verb} ${i.url}")
         val outcome = operation(i)
         println("<- ${outcome.status.name}")
         return outcome
@@ -142,15 +156,44 @@ The first policy in the list runs outermost. One that never calls `operation` sh
 call entirely. That's on purpose, there's no guard against it: retry, auth refresh, and caching
 all need that power.
 
+## Settings and per-call options
+
+`RpcSettings` holds client-wide defaults, applied to every call from that `HttpRpc` instance:
+
+```kotlin
+import kiit.rpc.RpcSettings
+import kiit.rpc.http.HttpRpc
+
+val client = HttpRpc(settings = RpcSettings(baseUrl = "https://api.example.com"))
+val outcome = client.get("/users")
+```
+
+`RpcOptions` overrides just the timeouts, for just one call:
+
+```kotlin
+import kiit.rpc.RpcOptions
+import kiit.rpc.RpcRequest
+
+val request = RpcRequest.get("https://api.example.com/slow-endpoint")
+    .copy(options = RpcOptions(requestTimeoutMillis = 30_000))
+val outcome = client.execute(request)
+```
+
+`connectTimeoutMillis` (on both `RpcSettings` and `RpcOptions`) is a no-op on the Darwin (iOS)
+engine, Ktor's `HttpTimeout` plugin doesn't support a connect-timeout override there. It still
+works on OkHttp (JVM/Android).
+
 ## Usage
 
 1. **Calling other kiit-based services.** The status comes back exact, not guessed from the HTTP
-   code, since a kiit server can embed its own structured status in the response.
+   code, since a kiit server can embed its own structured status via a response header.
 2. **Calling any other HTTP API.** The plain status code still maps to the closest kiit-codes
    status, the taxonomy isn't kiit-only.
 3. **Typed responses.** `executeResult`/`executeOutcome` skip the manual decode step.
 4. **Cross-cutting concerns.** Logging, retry, or auth refresh as a `Policy`, instead of wrapping
    every call site by hand.
+5. **Binary responses.** An image or PDF response comes back as `ContentFile`/`ContentData` with
+   its bytes intact, never corrupted by a forced text decode.
 
 **Good fit if:**
 1. You already use (or want) kiit-codes' status taxonomy and want an HTTP client that plugs into
@@ -166,8 +209,8 @@ all need that power.
 
 - Kotlin Multiplatform
 - JVM, Android, iOS (arm64, simulator arm64, x64)
-- Depends on `dev.kiit:kiit-codes` and `dev.kiit:kiit-result` (transitively available to
-  consumers via `api`)
+- Depends on `dev.kiit:kiit-codes`, `dev.kiit:kiit-result`, `dev.kiit:kiit-call`, and
+  `dev.kiit:kiit-inputs` (all transitively available to consumers via `api`)
 
 ## License
 

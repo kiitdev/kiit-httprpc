@@ -12,12 +12,21 @@ import io.ktor.http.headersOf
 import kiit.rpc.RpcPolicy
 import kiit.rpc.RpcSettings
 
-/** Builds an [HttpRpc] wired to a Ktor [MockEngine], so tests never make a real network call. */
+/**
+ * Builds an [HttpRpc] wired to a Ktor [MockEngine], so tests never make a real network call.
+ *
+ * ktlint's `function-signature` rule wants this collapsed onto one (>120 char) line since there's
+ * no `.editorconfig` `max_line_length` for it to check against here, which would then fail
+ * detekt's `MaxLineLength`. Suppressed rather than collapsed.
+ */
+@Suppress("ktlint:standard:function-signature")
 fun mockHttpRpc(
     settings: RpcSettings = RpcSettings(),
     policies: List<RpcPolicy> = emptyList(),
     handler: MockRequestHandler,
-): HttpRpc = HttpRpc(settings = settings, policies = policies, engine = MockEngine(handler))
+): HttpRpc {
+    return HttpRpc(settings = settings, policies = policies, engine = MockEngine(handler))
+}
 
 /** Shorthand for a JSON response, the common case across these tests. */
 fun MockRequestHandleScope.respondJson(json: String, status: HttpStatusCode = HttpStatusCode.OK): HttpResponseData =

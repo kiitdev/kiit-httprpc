@@ -19,6 +19,7 @@ import kiit.rpc.Body
 import kiit.rpc.RpcOptions
 import kiit.rpc.RpcRequest
 import kiit.rpc.RpcResponse
+import kiit.rpc.RpcSettings
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
