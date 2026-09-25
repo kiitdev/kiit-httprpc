@@ -167,9 +167,8 @@ private suspend fun showOwnClientAndClose() {
 
     // <example id="own-client" tags="lifecycle">
     // A fully pre-built HttpClient, used as-is — here with Ktor's own HttpCache plugin
-    // installed. RpcSettings' timeout/redirect fields don't apply, this client is already
-    // configured. `ktor-client-cache` is an opt-in dependency this sample adds itself, not
-    // something kiit-rpc bundles.
+    // installed (built into ktor-client-core, no extra dependency needed). RpcSettings'
+    // timeout/redirect fields don't apply, this client is already configured.
     val cachingClient = HttpClient(OkHttp) { install(HttpCache) }
     val client = HttpRpc(client = cachingClient)
     val outcome = client.get("https://httpbin.org/get")

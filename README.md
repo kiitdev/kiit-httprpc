@@ -199,9 +199,9 @@ import kiit.rpc.http.HttpRpc
 val withCustomEngine = HttpRpc(engine = OkHttp.create { /* e.g. config.connectionPool(...) */ })
 
 // client: a fully pre-built HttpClient, used exactly as given — e.g. with Ktor's own HttpCache
-// plugin installed (needs its own `ktor-client-cache` dependency, not bundled with kiit-rpc), or
-// one client shared across several libraries. RpcSettings' timeout/redirect fields don't apply
-// here, you've already configured the client yourself.
+// plugin installed (built into ktor-client-core, no extra dependency needed), or one client
+// shared across several libraries. RpcSettings' timeout/redirect fields don't apply here,
+// you've already configured the client yourself.
 val cachingClient = HttpClient(OkHttp) { install(HttpCache) }
 val withOwnClient = HttpRpc(client = cachingClient)
 ```
