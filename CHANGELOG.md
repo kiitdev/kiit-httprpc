@@ -27,4 +27,8 @@ All notable changes to kiit-rpc are documented here. Format follows
   the resolved `Status` on failure.
 - `RpcSettings.baseUrl`/`defaultAuth`/`callerId`/`defaultHeaders`, and `RpcRequest.options`
   (`RpcOptions`) for a per-call timeout override.
-- `HttpRpc` implements `AutoCloseable`.
+- `HttpRpc` implements `AutoCloseable`. `close()` only releases a client it built itself, never
+  one supplied via the new `client` constructor param.
+- `HttpRpc(client: HttpClient? = null)` — a fully pre-built Ktor client, used as-is. Covers
+  installing Ktor's own `HttpCache` plugin (or any other plugin kiit-rpc doesn't wrap) and sharing
+  one client across several libraries.

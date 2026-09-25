@@ -1,7 +1,10 @@
 package kiit.rpc.http
 
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
+import io.ktor.client.request.get
 import io.ktor.http.HttpStatusCode
 import kiit.call.ContentText
 import kiit.call.ContentTypes
@@ -20,6 +23,7 @@ import kiit.rpc.RpcOptions
 import kiit.rpc.RpcRequest
 import kiit.rpc.RpcResponse
 import kiit.rpc.RpcSettings
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -321,5 +325,49 @@ class HttpRpcTest {
             val outcome = client.execute(request)
 
             assertIs<Failure<*>>(outcome)
+        }
+
+    @Test
+    fun closingAnInstanceThatNeverMadeACallIsANoOp() {
+        val client = HttpRpc(engine = MockEngine { respond("", HttpStatusCode.OK) })
+        client.close()
+    }
+
+    @Test
+    fun closeReleasesAnInternallyBuiltClient() =
+        runTest {
+            val client = mockHttpRpc { respond("", HttpStatusCode.OK) }
+            client.get(BASE_URL)
+            client.close()
+
+            // A closed Ktor engine throws (JobCancellationException, a CancellationException
+            // subtype) rather than resolving to a clean Failure — performCall's own catch
+            // deliberately re-throws any CancellationException instead of swallowing it, since
+            // otherwise real caller-side coroutine cancellation would silently become a Failure
+            // too. Using an HttpRpc after close() is a caller error, expected to throw.
+            var threw = false
+            try {
+                client.get(BASE_URL)
+            } catch (e: CancellationException) {
+                threw = true
+            }
+            assertTrue(threw)
+        }
+
+    @Test
+    fun aSuppliedClientIsUsedAsIsAndNotClosedByHttpRpc() =
+        runTest {
+            val rawClient = HttpClient(MockEngine { respond("", HttpStatusCode.OK) })
+            val client = HttpRpc(client = rawClient)
+
+            val outcome = client.get(BASE_URL)
+            assertIs<Success<RpcResponse>>(outcome)
+
+            client.close()
+
+            // rawClient is still usable directly — HttpRpc.close() didn't close it, since it
+            // doesn't own it.
+            val stillUsable = rawClient.get(BASE_URL)
+            assertEquals(HttpStatusCode.OK, stillUsable.status)
         }
 }

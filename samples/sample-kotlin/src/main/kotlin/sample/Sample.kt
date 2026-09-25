@@ -1,5 +1,9 @@
 package sample
 
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.cache.HttpCache
+import io.ktor.client.request.get
 import kiit.call.Contents
 import kiit.inputs.Inputs
 import kiit.inputs.ListMap
@@ -154,6 +158,33 @@ private suspend fun showSettings() {
     verify("options-per-call-timeout: failed as expected", timedOut !is Success)
 }
 
+// ============================================================
+// Part 6: Supplying your own client, and lifecycle
+// ============================================================
+
+private suspend fun showOwnClientAndClose() {
+    section("Part 6: Supplying your own client, and lifecycle")
+
+    // <example id="own-client" tags="lifecycle">
+    // A fully pre-built HttpClient, used as-is — here with Ktor's own HttpCache plugin
+    // installed. RpcSettings' timeout/redirect fields don't apply, this client is already
+    // configured. `ktor-client-cache` is an opt-in dependency this sample adds itself, not
+    // something kiit-rpc bundles.
+    val cachingClient = HttpClient(OkHttp) { install(HttpCache) }
+    val client = HttpRpc(client = cachingClient)
+    val outcome = client.get("https://httpbin.org/get")
+    // </example>
+    verify("own-client: succeeded", outcome is Success)
+
+    // <example id="close" tags="lifecycle">
+    // close() releases a client HttpRpc built itself. It never closes a client you supplied,
+    // that one's still yours to manage.
+    client.close()
+    // </example>
+    val stillUsable = cachingClient.get("https://httpbin.org/get") { }
+    verify("own-client: not closed by HttpRpc.close()", stillUsable.status.value == 200)
+}
+
 fun main() =
     runBlocking {
         val client = HttpRpc()
@@ -162,6 +193,7 @@ fun main() =
         showTypedDecode(client)
         showPolicy()
         showSettings()
+        showOwnClientAndClose()
 
         println()
         println("All $checks checks passed.")

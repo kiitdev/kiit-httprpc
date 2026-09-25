@@ -18,4 +18,8 @@ dependencies {
     // Needed for runBlocking — kiit-rpc itself doesn't need this on a consumer's classpath, but
     // any real main() calling a suspend function does, same as it would in a real app.
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.ktor.client.okhttp)
+    // Demonstrates supplying HttpRpc's own client with a Ktor plugin installed. Not a kiit-rpc
+    // dependency, an opt-in one this sample adds itself, same as any consumer would.
+    implementation(libs.ktor.client.cache)
 }

@@ -26,6 +26,7 @@ Part of [Kiit](https://www.kiit.dev)
 - [Typed calls](#typed-calls)
 - [Policies](#policies)
 - [Settings and per-call options](#settings-and-per-call-options)
+- [Engine, client, and lifecycle](#engine-client-and-lifecycle)
 - [Usage](#usage)
 - [Requirements](#requirements)
 - [License](#license)
@@ -182,6 +183,36 @@ val outcome = client.execute(request)
 `connectTimeoutMillis` (on both `RpcSettings` and `RpcOptions`) is a no-op on the Darwin (iOS)
 engine, Ktor's `HttpTimeout` plugin doesn't support a connect-timeout override there. It still
 works on OkHttp (JVM/Android).
+
+## Engine, client, and lifecycle
+
+`HttpRpc` takes two escape hatches for anything it doesn't wrap an opinion around, and implements
+`AutoCloseable` for the one it builds internally:
+
+```kotlin
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import kiit.rpc.http.HttpRpc
+
+// engine: swap just the engine's own config, RpcSettings' timeouts/redirects still apply on top
+// of it. OkHttp is already on the classpath, kiit-rpc's own JVM/Android target depends on it.
+val withCustomEngine = HttpRpc(engine = OkHttp.create { /* e.g. config.connectionPool(...) */ })
+
+// client: a fully pre-built HttpClient, used exactly as given — e.g. with Ktor's own HttpCache
+// plugin installed (needs its own `ktor-client-cache` dependency, not bundled with kiit-rpc), or
+// one client shared across several libraries. RpcSettings' timeout/redirect fields don't apply
+// here, you've already configured the client yourself.
+val cachingClient = HttpClient(OkHttp) { install(HttpCache) }
+val withOwnClient = HttpRpc(client = cachingClient)
+```
+
+```kotlin
+withCustomEngine.close()
+```
+
+`close()` releases the client `HttpRpc` built itself. It's a no-op if the instance never made a
+call, and it never closes a `client` you supplied — that one's still yours to manage, since it may
+be shared elsewhere in your app.
 
 ## Usage
 

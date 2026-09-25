@@ -139,7 +139,7 @@ class HttpRpc(
     private suspend fun performCall(request: RpcRequest, multipart: Body.MultiPart?): Outcome<RpcResponse> =
         try {
             val response =
-                client.request(request.url) {
+                resolvedClient.request(request.url) {
                     method = request.verb.toKtorMethod()
                     request.meta?.keys()?.forEach { key -> header(key, request.meta.get(key)?.toString() ?: "") }
                     applyTimeoutOverride(request.options)
