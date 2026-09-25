@@ -59,17 +59,32 @@ private const val CALLER_ID_HEADER = "X-Caller-Id"
  * Ktor-backed [RpcClient]. Every call funnels through [execute], the one place the [Policy]
  * chain runs, the actual network call happens (in [performCall]), and the response's
  * [kiit.codes.Status] gets resolved via [statusConverter].
+ *
+ * [engine] swaps just the Ktor engine, [RpcSettings]' timeouts/redirects still apply on top of
+ * it. [client] is the heavier escape hatch: a fully pre-built `HttpClient`, used exactly as
+ * given, e.g. with `HttpCache` or other plugins installed, or shared across several libraries.
+ * `RpcSettings`' timeout/redirect fields are not applied to a supplied [client], the caller
+ * already configured it.
+ *
+ * Implements [AutoCloseable]: [close] releases the underlying Ktor `HttpClient` (connection pool,
+ * engine threads). Matters for a long-lived, app-scoped instance on shutdown, DI teardown, or in
+ * tests. Closing an instance that never made a call is a no-op, it doesn't build a client just
+ * to tear it down. A caller-supplied [client] is never closed here, it may be shared elsewhere in
+ * the caller's app, so its lifecycle stays the caller's responsibility.
  */
 class HttpRpc(
     private val settings: RpcSettings = RpcSettings(),
     private val policies: List<RpcPolicy> = emptyList(),
     statusConverter: StatusConverter? = null,
     private val engine: HttpClientEngine? = null,
-) : RpcClient {
+    client: HttpClient? = null,
+) : RpcClient, AutoCloseable {
     private val statusConverter: StatusConverter =
         statusConverter ?: KiitStatusConverter(parseStatusFromBody = settings.parseStatusFromBody)
 
-    private val client: HttpClient by lazy { buildClient() }
+    private val suppliedClient: HttpClient? = client
+    private val clientLazy: Lazy<HttpClient> = lazy { suppliedClient ?: buildClient() }
+    private val resolvedClient: HttpClient get() = clientLazy.value
 
     private fun buildClient(): HttpClient {
         val customEngine = engine
@@ -78,6 +93,10 @@ class HttpRpc(
         } else {
             HttpClient { applyTimeoutAndRedirects() }
         }
+    }
+
+    override fun close() {
+        if (suppliedClient == null && clientLazy.isInitialized()) resolvedClient.close()
     }
 
     private fun HttpClientConfig<*>.applyTimeoutAndRedirects() {
