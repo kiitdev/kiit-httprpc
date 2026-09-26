@@ -32,5 +32,5 @@ object Policies {
     }
 }
 
-/** [Policy] specialized for HTTP request/response interception (logging, retry, diagnostics, etc.). */
-typealias HttpRpcPolicy = Policy<HttpRpcRequest, HttpRpcResponse>
+/** [Policy] specialized for request/response interception (logging, retry, diagnostics, etc.). */
+typealias RpcPolicy = Policy<RpcRequest, RpcResponse>

@@ -1,4 +1,4 @@
-package kiit.rpc
+package kiit.rpc.http
 
 import kiit.codes.Codes
 import kiit.codes.Excluded
@@ -11,12 +11,16 @@ import kiit.codes.Status
 import kiit.codes.StatusConstants
 import kiit.codes.Succeeded
 import kiit.codes.Unserved
+import kiit.inputs.Meta
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonObject
+
+private const val HEADER_STATUS = "x-server-status-rfc9457"
+private const val HEADER_TITLE = "x-server-status-rfc9457-title"
 
 /**
  * Parses [body] as a JSON object, or null if it isn't valid JSON or isn't an object. Both are
@@ -109,4 +113,33 @@ private fun JsonObject.problemStatusOrNull(): Status? {
 internal fun structuredStatusOrNull(body: String): Status? {
     val obj = parseJsonObjectOrNull(body) ?: return null
     return obj.codeDetailStatusOrNull() ?: obj.problemStatusOrNull()
+}
+
+private fun String.kebabToPascalCase(): String = replaceFirstChar { it.uppercase() }
+
+private fun String.kebabToUpperSnakeCase(): String = replace("-", "_").uppercase()
+
+/**
+ * Reconstructs a [Status] from the `x-server-status-rfc9457`/`-title` response headers, if
+ * present. Value is an RFC 9457-shaped URI encoding origin/scope/group/code by position, e.g.
+ * `https://stripe.com/problems/payments.cards/rejected/duplicate-charge` gives origin=`stripe.com`,
+ * scope=`payments.cards`, group=`rejected`, code=`duplicate-charge`. The second segment
+ * (`problems`) is a fixed prefix, ignored. `group`/`code` come in kebab-case and get normalized
+ * to kiit-codes' own PascalCase/UPPER_SNAKE_CASE before the registry lookup.
+ *
+ * Unlike [problemStatusOrNull], this handles a custom origin directly, no `baseUrls` mapping
+ * needed since origin/scope are already in the header. No body access either, so
+ * [KiitStatusConverter] checks this before any body parsing.
+ */
+internal fun headerStatusOrNull(meta: Meta): Status? {
+    val header = meta.getStringOrNull(HEADER_STATUS) ?: return null
+    val title = meta.getStringOrNull(HEADER_TITLE) ?: ""
+    val segments = header.substringAfter("://", header).split("/").filter { it.isNotEmpty() }
+    if (segments.size < 5) return null
+    val origin = segments[0]
+    // segments[1] is the fixed namespace prefix, intentionally ignored.
+    val scope = segments[2]
+    val group = segments[3].kebabToPascalCase()
+    val code = segments[4].kebabToUpperSnakeCase()
+    return statusFromCode("Failed:$group:$code", origin = origin, scope = scope, message = title)
 }

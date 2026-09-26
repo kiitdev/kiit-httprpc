@@ -1,5 +1,7 @@
 package kiit.rpc
 
+import kiit.requests.Content
+
 /**
  * Request body variants. All are pre-serialized/raw. [Serializer] is the separate, higher-level
  * path for typed values, used by `executeResult`/`executeOutcome`. There's no `JsonObject`-style

@@ -1,4 +1,4 @@
-package kiit.rpc
+package kiit.rpc.http
 
 import kiit.codes.Excluded
 import kiit.codes.Invalid

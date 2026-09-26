@@ -1,56 +1,61 @@
 package kiit.rpc
 
+import kiit.inputs.Inputs
 import kiit.result.Outcome
 
 /**
- * Public contract [HttpRpc] implements. Lets a consumer mock or substitute the client in their
- * own tests without depending on the concrete Ktor-backed implementation.
+ * Public contract [kiit.rpc.http.HttpRpc] implements, so a consumer can mock or substitute the
+ * client in tests without depending on the concrete Ktor implementation.
+ *
+ * [execute] is the only abstract method. Every named verb below is a default built on top of it,
+ * so a new transport only has to implement [execute] to get the whole named-method API for free.
  */
 interface RpcClient {
+    suspend fun execute(request: RpcRequest): Outcome<RpcResponse>
+
     suspend fun get(
         url: String,
-        meta: Meta? = null,
-        args: Args? = null,
+        meta: Inputs? = null,
+        args: Inputs? = null,
         auth: Auth? = null,
-    ): Outcome<HttpRpcResponse>
+    ): Outcome<RpcResponse> = execute(RpcRequest.get(url, meta, args, auth))
 
     suspend fun query(
         url: String,
-        meta: Meta? = null,
-        args: Args? = null,
+        meta: Inputs? = null,
+        args: Inputs? = null,
         auth: Auth? = null,
-        body: Body? = null,
-    ): Outcome<HttpRpcResponse>
+        data: Body? = null,
+    ): Outcome<RpcResponse> = execute(RpcRequest.query(url, meta, args, auth, data))
 
     suspend fun create(
         url: String,
-        meta: Meta? = null,
-        args: Args? = null,
+        meta: Inputs? = null,
+        args: Inputs? = null,
         auth: Auth? = null,
-        body: Body? = null,
-    ): Outcome<HttpRpcResponse>
+        data: Body? = null,
+    ): Outcome<RpcResponse> = execute(RpcRequest.create(url, meta, args, auth, data))
 
     suspend fun update(
         url: String,
-        meta: Meta? = null,
-        args: Args? = null,
+        meta: Inputs? = null,
+        args: Inputs? = null,
         auth: Auth? = null,
-        body: Body? = null,
-    ): Outcome<HttpRpcResponse>
+        data: Body? = null,
+    ): Outcome<RpcResponse> = execute(RpcRequest.update(url, meta, args, auth, data))
 
     suspend fun patch(
         url: String,
-        meta: Meta? = null,
-        args: Args? = null,
+        meta: Inputs? = null,
+        args: Inputs? = null,
         auth: Auth? = null,
-        body: Body? = null,
-    ): Outcome<HttpRpcResponse>
+        data: Body? = null,
+    ): Outcome<RpcResponse> = execute(RpcRequest.patch(url, meta, args, auth, data))
 
     suspend fun delete(
         url: String,
-        meta: Meta? = null,
-        args: Args? = null,
+        meta: Inputs? = null,
+        args: Inputs? = null,
         auth: Auth? = null,
-        body: Body? = null,
-    ): Outcome<HttpRpcResponse>
+    ): Outcome<RpcResponse> = execute(RpcRequest.delete(url, meta, args, auth))
 }
