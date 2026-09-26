@@ -1,6 +1,5 @@
 package kiit.rpc.http
 
-import kiit.call.Contents
 import kiit.codes.Invalid
 import kiit.codes.Rejected
 import kiit.codes.Restricted
@@ -9,6 +8,7 @@ import kiit.codes.Succeeded
 import kiit.inputs.ListMap
 import kiit.inputs.Meta
 import kiit.inputs.MetaMap
+import kiit.requests.Contents
 import kiit.rpc.RpcResponse
 import kotlin.test.Test
 import kotlin.test.assertEquals

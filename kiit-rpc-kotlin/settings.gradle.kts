@@ -38,6 +38,12 @@ includeBuild("../../kiit-inputs/kiit-inputs-kotlin") {
     }
 }
 
+includeBuild("../../kiit-requests/kiit-requests-kotlin") {
+    dependencySubstitution {
+        substitute(module("dev.kiit:kiit-requests")).using(project(":kiit-requests"))
+    }
+}
+
 include(":kiit-rpc")
 include(":sample-kotlin")
 

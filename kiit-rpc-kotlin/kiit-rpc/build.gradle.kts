@@ -54,11 +54,14 @@ kotlin {
             api("dev.kiit:kiit-codes:1.1.0")
             api("dev.kiit:kiit-result:1.0.2")
 
-            // RpcRequest/RpcResponse/RpcSettings expose Verb/Identity/Content directly (kiit-call)
-            // and Inputs/Meta directly (kiit-inputs). Resolved from the local checkout via the
-            // composite builds in settings.gradle.kts until both are actually published.
+            // RpcSettings exposes Identity directly (kiit-call). RpcRequest/RpcResponse expose
+            // Inputs/Meta directly (kiit-inputs), and Verb/Version/Trace/Content/ClientRequest
+            // directly (kiit-requests, which now owns the shared call-shape vocabulary). Resolved
+            // from the local checkout via the composite builds in settings.gradle.kts until all
+            // three are actually published.
             api("dev.kiit:kiit-call:0.0.0")
             api("dev.kiit:kiit-inputs:0.0.0")
+            api("dev.kiit:kiit-requests:0.0.0")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

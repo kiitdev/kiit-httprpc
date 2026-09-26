@@ -1,8 +1,8 @@
 package kiit.rpc
 
-import kiit.call.Contents
 import kiit.codes.Err
 import kiit.codes.Unserved
+import kiit.requests.Contents
 import kiit.result.Failure
 import kiit.result.Outcome
 import kiit.result.Result

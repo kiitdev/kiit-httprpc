@@ -1,7 +1,7 @@
 package kiit.rpc.http
 
-import kiit.call.Contents
 import kiit.codes.Status
+import kiit.requests.Contents
 import kiit.rpc.RpcResponse
 import kiit.rpc.StatusConverter
 

@@ -49,13 +49,14 @@ dependencies {
 }
 ```
 
-`kiit-rpc` depends on `dev.kiit:kiit-codes`, `dev.kiit:kiit-result`, `dev.kiit:kiit-call`, and
-`dev.kiit:kiit-inputs` transitively (all `api`), so you don't need to add any of them separately.
+`kiit-rpc` depends on `dev.kiit:kiit-codes`, `dev.kiit:kiit-result`, `dev.kiit:kiit-call`,
+`dev.kiit:kiit-inputs`, and `dev.kiit:kiit-requests` transitively (all `api`), so you don't need
+to add any of them separately.
 
 **A basic call:**
 
 ```kotlin
-import kiit.call.Contents
+import kiit.requests.Contents
 import kiit.rpc.http.HttpRpc
 
 val client = HttpRpc()
@@ -83,8 +84,8 @@ including auth, a typed call, a logging policy, and per-call settings.
 | Term | What it is |
 |---|---|
 | **`RpcClient`** (`kiit.rpc`) | The public contract: `execute` is the one abstract method, `get`/`query`/`create`/`update`/`patch`/`delete` are defaults built on top of it. `kiit.rpc.http.HttpRpc` is the Ktor-backed implementation. |
-| **`RpcRequest`** | The caller-facing, outbound mirror of kiit-requests' `Request`: `verb`/`url`/`meta`/`args`/`data`/`auth`/`version`/`trace`/`options`. A flat `url`, not the area/name/action convention, since an outbound call isn't necessarily hitting a kiit API. |
-| **`RpcResponse`** | `status`/`data`/`meta`. `data` is a `kiit.call.Content` (`ContentText`/`ContentFile`/`ContentData`), never forced through text decoding, so a binary response comes back with its bytes intact. `meta` is a `kiit.inputs.Meta`, preserving every value for a repeated header like `Set-Cookie`. |
+| **`RpcRequest`** | The caller-facing, outbound mirror of kiit-requests' `ServerRequest`, implementing the shared `kiit.requests.ClientRequest`/`Request` interfaces: `verb`/`url`/`meta`/`args`/`data`/`auth`/`version`/`trace`/`source`/`options`. A flat `url`, not the area/name/action convention, since an outbound call isn't necessarily hitting a kiit API. |
+| **`RpcResponse`** | `status`/`data`/`meta`. `data` is a `kiit.requests.Content` (`ContentText`/`ContentFile`/`ContentData`), never forced through text decoding, so a binary response comes back with its bytes intact. `meta` is a `kiit.inputs.Meta`, preserving every value for a repeated header like `Set-Cookie`. |
 | **`Outcome<T>`** | `Result<T, Err>` from kiit-result. Every call returns `Outcome<RpcResponse>`, carrying a resolved `Status`. On failure, `Err.ref` carries the original `RpcResponse`, so nothing is lost even when the status alone doesn't say enough. |
 | **`RpcSettings`** | Client-wide config: `baseUrl`, `defaultHeaders`, `defaultAuth`, `callerId`, timeouts, `followRedirects`, `parseStatusFromBody`. |
 | **`RpcOptions`** | Per-call override of `RpcSettings`' timeouts, via `RpcRequest.options`. |
@@ -240,8 +241,8 @@ be shared elsewhere in your app.
 
 - Kotlin Multiplatform
 - JVM, Android, iOS (arm64, simulator arm64, x64)
-- Depends on `dev.kiit:kiit-codes`, `dev.kiit:kiit-result`, `dev.kiit:kiit-call`, and
-  `dev.kiit:kiit-inputs` (all transitively available to consumers via `api`)
+- Depends on `dev.kiit:kiit-codes`, `dev.kiit:kiit-result`, `dev.kiit:kiit-call`,
+  `dev.kiit:kiit-inputs`, and `dev.kiit:kiit-requests` (all transitively available to consumers via `api`)
 
 ## License
 

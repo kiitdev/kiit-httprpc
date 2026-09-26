@@ -11,11 +11,12 @@ All notable changes to kiit-rpc are documented here. Format follows
 - `RpcRequest`/`RpcResponse`/`RpcSettings`/`RpcOptions`/`RpcClient` redesign: `RpcClient`
   collapses to one abstract `execute()` method, with `get`/`query`/`create`/`update`/`patch`/
   `delete` as defaults built on top of it. `ExecuteParams` and the local `HttpMethod` enum are
-  gone, replaced by the shared `kiit.call.Verb`.
-- Depends on `kiit-call` (`Identity`/`Source`/`Verb`/`Version`/`Trace`/`Content`) and `kiit-inputs`
-  (`Inputs`/`Meta`), so `RpcRequest.meta`/`args` and `RpcResponse.meta`/`data` use the same shared
-  types kiit-requests uses on the inbound side.
-- `RpcResponse.data` is a `kiit.call.Content`, not a plain `String` — binary responses come back
+  gone, replaced by the shared `kiit.requests.Verb`.
+- `RpcRequest` implements `kiit.requests.ClientRequest`/`Request`, the shared call shape also used
+  by kiit-requests' `ServerRequest` on the inbound side. Depends on `kiit-requests`
+  (`Verb`/`Version`/`Trace`/`Source`/`Content`), `kiit-call` (`Identity`), and `kiit-inputs`
+  (`Inputs`/`Meta`).
+- `RpcResponse.data` is a `kiit.requests.Content`, not a plain `String` — binary responses come back
   as `ContentFile`/`ContentData` with their bytes intact instead of being forced through text
   decoding.
 - `RpcResponse.meta` preserves every value for a repeated header (`Set-Cookie`), not just the

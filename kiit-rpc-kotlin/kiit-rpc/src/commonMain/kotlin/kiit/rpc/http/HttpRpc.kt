@@ -20,13 +20,6 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.URLBuilder
 import io.ktor.http.content.TextContent
 import io.ktor.http.encodeURLParameter
-import kiit.call.Content
-import kiit.call.ContentData
-import kiit.call.ContentFile
-import kiit.call.ContentText
-import kiit.call.ContentType
-import kiit.call.ContentTypes
-import kiit.call.Verb
 import kiit.codes.Err
 import kiit.codes.Failed
 import kiit.codes.Passed
@@ -35,6 +28,13 @@ import kiit.inputs.Inputs
 import kiit.inputs.ListMap
 import kiit.inputs.Meta
 import kiit.inputs.MetaMap
+import kiit.requests.Content
+import kiit.requests.ContentData
+import kiit.requests.ContentFile
+import kiit.requests.ContentText
+import kiit.requests.ContentType
+import kiit.requests.ContentTypes
+import kiit.requests.Verb
 import kiit.result.Failure
 import kiit.result.Outcome
 import kiit.result.Success
@@ -118,7 +118,7 @@ class HttpRpc(
         val url = buildUrl(request.url, request.args)
         val auth = request.auth ?: settings.defaultAuth
         val meta = mergedMeta(request.meta, request.data, auth)
-        return request.copy(url = url, args = null, meta = meta, auth = auth)
+        return request.copy(url = url, args = MetaMap(ListMap()), meta = meta, auth = auth)
     }
 
     override suspend fun execute(request: RpcRequest): Outcome<RpcResponse> {
@@ -141,7 +141,7 @@ class HttpRpc(
             val response =
                 resolvedClient.request(request.url) {
                     method = request.verb.toKtorMethod()
-                    request.meta?.keys()?.forEach { key -> header(key, request.meta.get(key)?.toString() ?: "") }
+                    request.meta.keys().forEach { key -> header(key, request.meta.get(key)?.toString() ?: "") }
                     applyTimeoutOverride(request.options)
                     applyBody(request.data, multipart)
                 }
@@ -152,9 +152,9 @@ class HttpRpc(
             Failure(Err.ex(e), Unserved.UNEXPECTED)
         }
 
-    private fun buildUrl(url: String, args: Inputs?): String {
+    private fun buildUrl(url: String, args: Inputs): String {
         val resolved = resolveUrl(url)
-        if (args == null || args.keys().isEmpty()) return resolved
+        if (args.keys().isEmpty()) return resolved
         val builder = URLBuilder(resolved)
         args.keys().forEach { key -> builder.parameters.append(key, args.get(key)?.toString() ?: "") }
         return builder.buildString()
@@ -169,11 +169,11 @@ class HttpRpc(
     private fun String.isAbsolute(): Boolean = startsWith("http://") || startsWith("https://")
 
     /** Order: `defaultHeaders`, then the call's own `meta` (overrides defaults), then content-type/auth/caller id. */
-    private fun mergedMeta(requestMeta: Inputs?, data: Body?, auth: Auth?): Inputs {
+    private fun mergedMeta(requestMeta: Inputs, data: Body?, auth: Auth?): Inputs {
         val merged = LinkedHashMap<String, String>()
         val defaults = settings.defaultHeaders
         defaults.keys().forEach { key -> merged[key] = defaults.get(key)?.toString() ?: "" }
-        requestMeta?.keys()?.forEach { key -> merged[key] = requestMeta.get(key)?.toString() ?: "" }
+        requestMeta.keys().forEach { key -> merged[key] = requestMeta.get(key)?.toString() ?: "" }
         contentTypeFor(data)?.let { merged[HttpHeaders.ContentType] = it }
         authHeader(auth)?.let { (key, value) -> merged[key] = value }
         settings.callerId?.let { merged[CALLER_ID_HEADER] = it.id }

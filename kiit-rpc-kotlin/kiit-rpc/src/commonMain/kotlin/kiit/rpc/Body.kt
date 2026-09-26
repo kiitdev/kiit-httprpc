@@ -1,6 +1,6 @@
 package kiit.rpc
 
-import kiit.call.Content
+import kiit.requests.Content
 
 /**
  * Request body variants. All are pre-serialized/raw. [Serializer] is the separate, higher-level

@@ -4,10 +4,10 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.cache.HttpCache
 import io.ktor.client.request.get
-import kiit.call.Contents
 import kiit.inputs.Inputs
 import kiit.inputs.ListMap
 import kiit.inputs.MetaMap
+import kiit.requests.Contents
 import kiit.rpc.Auth
 import kiit.rpc.Body
 import kiit.rpc.RpcOptions

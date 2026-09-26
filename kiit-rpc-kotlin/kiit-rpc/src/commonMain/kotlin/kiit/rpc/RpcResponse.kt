@@ -1,9 +1,9 @@
 package kiit.rpc
 
-import kiit.call.Content
 import kiit.inputs.ListMap
 import kiit.inputs.Meta
 import kiit.inputs.MetaMap
+import kiit.requests.Content
 
 /**
  * kiit-owned response type, never leaks Ktor's own response type through the public API.

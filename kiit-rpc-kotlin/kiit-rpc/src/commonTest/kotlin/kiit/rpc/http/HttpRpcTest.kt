@@ -6,8 +6,6 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
 import io.ktor.client.request.get
 import io.ktor.http.HttpStatusCode
-import kiit.call.ContentText
-import kiit.call.ContentTypes
 import kiit.call.Identity
 import kiit.codes.Err
 import kiit.codes.Invalid
@@ -15,6 +13,8 @@ import kiit.codes.Succeeded
 import kiit.inputs.Inputs
 import kiit.inputs.ListMap
 import kiit.inputs.MetaMap
+import kiit.requests.ContentText
+import kiit.requests.ContentTypes
 import kiit.result.Failure
 import kiit.result.Success
 import kiit.rpc.Auth
